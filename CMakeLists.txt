@@ -90,13 +90,13 @@ add_custom_command(TARGET hidapi-py POST_BUILD
 )
 
 add_custom_command(TARGET hidapi-py POST_BUILD
-    VERBATIM COMMAND python -c "import os; print(os.getcwd()) ;" || (exit 0)
+    VERBATIM COMMAND python3 -c "import os; print(os.getcwd()) ;" || (exit 0)
     WORKING_DIRECTORY $<TARGET_FILE_DIR:hidapi-py>
     COMMENT "Creating stubs for hidapi-py"
 )
 
 add_custom_command(TARGET hidapi-py POST_BUILD
-    VERBATIM COMMAND python -c "import os; import sys; sys.path.insert(1, os.getcwd()) ; from pybind11_stubgen import main; import hidapi_py; sys.argv[0] = 'pybind11-stubgen'; sys.argv.append('--ignore-all-errors') ; sys.argv.append('-o') ; sys.argv.append('.') ; sys.argv.append('hidapi_py') ; main() " ||(exit 0)
+    VERBATIM COMMAND python3 -c "import os; import sys; sys.path.insert(1, os.getcwd()) ; from pybind11_stubgen import main; import hidapi_py; sys.argv[0] = 'pybind11-stubgen'; sys.argv.append('--ignore-all-errors') ; sys.argv.append('-o') ; sys.argv.append('.') ; sys.argv.append('hidapi_py') ; main() " ||(exit 0)
     WORKING_DIRECTORY $<TARGET_FILE_DIR:hidapi-py>
     COMMENT "Creating stubs for hidapi-py"
 )
