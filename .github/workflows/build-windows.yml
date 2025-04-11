@@ -49,11 +49,11 @@ jobs:
           -G Ninja `
           -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build chiaki-ng
+      - name: Build hidapi-py
         run: |
           cmake --build build --config Release --clean-first --target hidapi-py
 
-      - name: Upload chiaki-ng Artifact
+      - name: Upload hidapi-py Artifact
         uses: actions/upload-artifact@v4
         with:
           name: hidapi-py-win-x64
