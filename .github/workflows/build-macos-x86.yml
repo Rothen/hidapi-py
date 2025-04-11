@@ -1,7 +1,9 @@
 name: Build hidapi-py macOSX x86_64
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build-mac_x64:
