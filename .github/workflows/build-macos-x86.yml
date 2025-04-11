@@ -20,6 +20,9 @@ jobs:
       - name: Install pybind-stubgen
         run: pip3 install pybind11-stubgen
 
+      - name: Debug Python version
+        run: python3 --version
+
       - name: Configure chiaki-ng
         run: |
             cmake -S . -B build -G Ninja \
