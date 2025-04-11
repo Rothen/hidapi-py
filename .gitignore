@@ -1,0 +1,4 @@
+build*/
+scripts/set_env.ps1
+deps/pybind11/
+.vscode/
