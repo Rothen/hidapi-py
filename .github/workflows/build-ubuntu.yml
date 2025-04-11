@@ -18,7 +18,7 @@ jobs:
             python-version: '3.11'
 
       - name: Install apt dependencies
-        run: apt install libhidapi-dev
+        run: sudo apt install libhidapi-dev
 
       - name: Install pybind-stubgen
         run: pip3 install pybind11-stubgen
