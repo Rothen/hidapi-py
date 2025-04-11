@@ -1,10 +1,3 @@
-# cmake -S . -B build \
-#     -DPython3_EXECUTABLE=$(which python3) \
-#     -DCMAKE_C_COMPILER=/usr/bin/gcc \
-#     -DCMAKE_CXX_COMPILER=/usr/bin/g++
-
-# cmake --build build --config Release --clean-first --target hidapi-py
-
 cmake_minimum_required(VERSION 3.14)
 project(hidapi-py)
 
@@ -12,8 +5,8 @@ if(NOT DEPS_FOLDER)
     set(DEPS_FOLDER ${CMAKE_SOURCE_DIR}/deps)
 endif(NOT DEPS_FOLDER)
 
-# Enable C++11
-set(CMAKE_CXX_STANDARD 11)
+# Enable C++14
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Python
@@ -60,6 +53,16 @@ if(WIN32)
         $<TARGET_FILE_DIR:hidapi-py>
         COMMENT "Copying hidapi.dll to output directory"
     )
+elseif(APPLE)
+    if(NOT HIDAPI_ROOT)
+        message(FATAL_ERROR "Please set HIDAPI_ROOT to the path where HIDAPI is installed (e.g., /opt/homebrew)")
+    endif()
+
+    set(HIDAPI_INCLUDE_DIR "${HIDAPI_ROOT}/include")
+    set(HIDAPI_LIBRARY_DIR "${HIDAPI_ROOT}/lib")
+
+    find_path(HIDAPI_INCLUDE_DIR NAMES hidapi/hidapi.h PATHS ${HIDAPI_INCLUDE_DIR} REQUIRED)
+    find_library(HIDAPI_LIBRARY NAMES hidapi PATHS ${HIDAPI_LIBRARY_DIR} REQUIRED)
 else()
     find_library(HIDAPI_LIBRARY NAMES hidapi-hidraw hidapi-libusb hidapi)
 endif()

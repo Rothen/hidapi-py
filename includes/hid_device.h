@@ -77,24 +77,6 @@ public:
         return read(reinterpret_cast<unsigned char *>(info.ptr), info.size, timeout_ms, blocking);
     }
 
-    int read(unsigned char *buffer, size_t length, int timeout_ms = 0, bool blocking = false)
-    {
-        if (timeout_ms == 0 && blocking)
-        {
-            timeout_ms = -1;
-        }
-        int rv;
-        if (timeout_ms)
-        {
-            rv = hid_read_timeout(hid_device_ptr, buffer, length, timeout_ms);
-        }
-        else
-        {
-            rv = hid_read(hid_device_ptr, buffer, length);
-        }
-        return rv;
-    }
-
     int set_nonblocking(int nonblock)
     {
         return hid_set_nonblocking(hid_device_ptr, nonblock);
@@ -143,6 +125,24 @@ private:
             hid_set_nonblocking(hid_device_ptr, 1);
         }
         opened = true;
+    }
+
+    int read(unsigned char *buffer, size_t length, int timeout_ms = 0, bool blocking = false)
+    {
+        if (timeout_ms == 0 && blocking)
+        {
+            timeout_ms = -1;
+        }
+        int rv;
+        if (timeout_ms)
+        {
+            rv = hid_read_timeout(hid_device_ptr, buffer, length, timeout_ms);
+        }
+        else
+        {
+            rv = hid_read(hid_device_ptr, buffer, length);
+        }
+        return rv;
     }
 
     hid_device *hid_device_ptr;
