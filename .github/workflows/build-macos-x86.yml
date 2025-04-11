@@ -1,0 +1,38 @@
+name: Build hidapi-py macOSX x86_64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-mac_x64:
+    name: Build macOSX x86_64 version
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install brew dependencies
+        run: |
+          brew update
+          brew install --force hidapi || true
+
+      - name: Configure chiaki-ng
+        run: |
+            cmake -S . -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER=/usr/bin/clang \
+                -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+                -DHIDAPI_ROOT="$(brew --prefix hidapi)"
+
+      - name: Build chiaki-py
+        run: |
+          cmake --build build --config Release --clean-first --target hidapi-py
+
+      - name: Upload chiaki-ng Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hidapi-py-macos-x86_64
+          path: |
+            build/hidapi_py.cpython-311-darwin.so
+            build/hidapi_py.pyi
+          if-no-files-found: error
+          retention-days: 7
