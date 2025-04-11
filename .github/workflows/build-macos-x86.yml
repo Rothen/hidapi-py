@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-mac_x64:
-    name: Build macOSX x86_64 version
+    name: Build macOSX x86_64
     runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
@@ -16,6 +16,9 @@ jobs:
         run: |
           brew update
           brew install --force hidapi || true
+
+      - name: Install pybind-stubgen
+        run: pip install pybind11-stubgen
 
       - name: Configure chiaki-ng
         run: |
