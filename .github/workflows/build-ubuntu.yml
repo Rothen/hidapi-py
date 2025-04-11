@@ -1,4 +1,4 @@
-name: Build hidapi-py macOSX x86_64
+name: Build hidapi-py Ubuntu x86_64
 
 on:
   push:
@@ -6,9 +6,9 @@ on:
       - main
 
 jobs:
-  build-mac_x64:
-    name: Build macOSX x86_64
-    runs-on: macos-13
+  build-ubuntu_x64:
+    name: Build Ubuntu x86_64
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -17,21 +17,18 @@ jobs:
         with:
             python-version: '3.11'
 
-      - name: Install brew dependencies
-        run: |
-          brew update
-          brew install --force hidapi || true
+      - name: Install apt dependencies
+        run: apt install libhidapi-dev
 
       - name: Install pybind-stubgen
         run: pip3 install pybind11-stubgen
 
       - name: Configure hidapi-py
         run: |
-            cmake -S . -B build -G Ninja \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_C_COMPILER=/usr/bin/clang \
-                -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
-                -DHIDAPI_ROOT="$(brew --prefix hidapi)"
+            cmake -S . -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_C_COMPILER=/usr/bin/gcc \
+              -DCMAKE_CXX_COMPILER=/usr/bin/g++
 
       - name: Build hidapi-py
         run: |
@@ -40,9 +37,9 @@ jobs:
       - name: Upload hidapi-py Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: hidapi-py-macos-x86_64
+          name: hidapi-py-ubuntu-x86_64
           path: |
-            build/hidapi_py.cpython-311-darwin.so
+            build/hidapi_py.cpython-311-x86_64-linux-gnu.so
             build/hidapi_py.pyi
           if-no-files-found: error
           retention-days: 7
