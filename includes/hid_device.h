@@ -1,8 +1,6 @@
 #ifndef _HIDAPI_PY_HID_DEVICE_H_
 #define _HIDAPI_PY_HID_DEVICE_H_
 
-#include "hid_device_info.h"
-
 #ifdef _WIN32
     #include <hidapi.h>
 #else
@@ -12,36 +10,68 @@
 #include <string>
 #include <locale>
 #include <codecvt>
+#include <vector>
 
 #include <pybind11/pybind11.h>
 
 #include <iostream>
-#include <iomanip> // for std::setw, std::setfill
+#include <utility>
 
 namespace py = pybind11;
 
+#define MAX_BUFFER_SIZE 255
+
 class HidDevice {
 public:
-    HidDevice(unsigned short vendor_id, unsigned short product_id, const wchar_t *serial_number, bool blocking = true) : HidDevice(hid_open(vendor_id, product_id, serial_number), blocking) { }
+    HidDevice(unsigned short vendor_id, unsigned short product_id, std::wstring serial_number, bool blocking = true) : HidDevice(false, blocking) {
+        this->vendor_id = vendor_id;
+        this->product_id = product_id;
+        this->serial_number = std::move(serial_number);
+    }
 
-    HidDevice(const char *path, bool blocking = true) : HidDevice(hid_open_path(path), blocking) {}
-
-    HidDevice(HidDeviceInfo &device_info, bool blocking = true) : HidDevice(device_info.get_device_info()->path, blocking) { }
+    HidDevice(std::string path, bool blocking = true) : HidDevice(true, blocking) {
+        this->path = std::move(path);
+    }
 
     ~HidDevice()
     {
         close();
     }
 
-    void close()
+    int open()
     {
-        if (hid_device_ptr != nullptr)
+        if (is_opened())
+            return -1;
+
+        if (open_by_path)
+        {
+            hid_device_ptr = hid_open_path(path.c_str());
+        }
+        else
+        {
+            hid_device_ptr = hid_open(vendor_id, product_id, serial_number.c_str());
+        }
+
+        if (!is_opened())
+        {
+            return 1;
+        }
+        if (!blocking)
+        {
+            hid_set_nonblocking(hid_device_ptr, 1);
+        }
+        return 0;
+    }
+
+    int close()
+    {
+        if (is_opened())
         {
             hid_close(hid_device_ptr);
             hid_device_ptr = nullptr; // Ensure the pointer is null after closing
+            return 0;
         }
-
-        opened = false;
+        return 1;
     }
 
     int write(std::string &data)
@@ -67,7 +97,7 @@ public:
 
     py::bytes read(int timeout_ms = 0, bool blocking = false)
     {
-        int rv = read(temp_read_data, 100, timeout_ms, blocking);
+        int rv = read(temp_read_data, MAX_BUFFER_SIZE, timeout_ms, blocking);
         return py::bytes(reinterpret_cast<const char *>(temp_read_data), rv);
     }
 
@@ -98,33 +128,51 @@ public:
         return hid_get_feature_report(hid_device_ptr, data_ptr, length);
     }
 
+    int get_input_report(uint8_t report_id, size_t length)
+    {
+        unsigned char *data_ptr = new unsigned char[length + 1];
+        data_ptr[0] = report_id;
+        return hid_get_input_report(hid_device_ptr, data_ptr, length);
+    }
+
     std::string get_error() {
         std::wstring ws(hid_error(hid_device_ptr));
         return std::string(ws.begin(), ws.end());
     }
 
-    bool is_opened() const { return opened; }
-    /*
-    int get_manufacturer_string(wchar_t *string, size_t maxlen) { return hid_get_manufacturer_string(hid_device_ptr, string, maxlen); }
-    int get_product_string(wchar_t *string, size_t maxlen) { return hid_get_product_string(hid_device_ptr, string, maxlen); }
-    int get_serial_number_string(wchar_t *string, size_t maxlen) { return hid_get_serial_number_string(hid_device_ptr, string, maxlen); }
-    int get_indexed_string(int string_index, wchar_t *string, size_t maxlen) { return hid_get_indexed_string(hid_device_ptr, string_index, string, maxlen); }
-    const wchar_t * get_error() { return hid_error(hid_device_ptr); }
-    */
+    std::wstring get_manufacturer() {
+        hid_get_manufacturer_string(hid_device_ptr, temp_wchar_buffer, MAX_BUFFER_SIZE);
+        return std::wstring(temp_wchar_buffer);
+    }
+
+    std::wstring get_product() {
+        hid_get_product_string(hid_device_ptr, temp_wchar_buffer, MAX_BUFFER_SIZE);
+        return std::wstring(temp_wchar_buffer);
+    }
+
+    std::wstring get_serial_number() {
+        hid_get_serial_number_string(hid_device_ptr, temp_wchar_buffer, MAX_BUFFER_SIZE);
+        return std::wstring(temp_wchar_buffer);
+    }
+
+    std::wstring get_indexed_string(int string_index) {
+        hid_get_indexed_string(hid_device_ptr, string_index, temp_wchar_buffer, MAX_BUFFER_SIZE);
+        return std::wstring(temp_wchar_buffer);
+    }
+
+    std::string get_report_descriptor()
+    {
+        hid_get_report_descriptor(hid_device_ptr, temp_char_buffer, MAX_BUFFER_SIZE);
+        return std::string(reinterpret_cast<char *>(temp_char_buffer));
+    }
+
+    bool is_opened() const { return hid_device_ptr != nullptr; }
+
+    hid_device *get_device() const { return hid_device_ptr; }
 
 private:
-    HidDevice(hid_device *device_ptr, bool blocking = true) : hid_device_ptr(device_ptr)
+    HidDevice(bool open_by_path, bool blocking) : open_by_path(open_by_path), blocking(blocking), hid_device_ptr(nullptr)
     {
-        if (!hid_device_ptr)
-        {
-            opened = false;
-            throw std::runtime_error("Failed to open HID device");
-        }
-        if (!blocking)
-        {
-            hid_set_nonblocking(hid_device_ptr, 1);
-        }
-        opened = true;
     }
 
     int read(unsigned char *buffer, size_t length, int timeout_ms = 0, bool blocking = false)
@@ -145,9 +193,18 @@ private:
         return rv;
     }
 
+    bool open_by_path;
+    bool blocking;
+
+    std::string path;
+    unsigned short vendor_id;
+    unsigned short product_id;
+    std::wstring serial_number;
+
     hid_device *hid_device_ptr;
-    unsigned char temp_read_data[100];
-    bool opened = true;
+    unsigned char temp_read_data[MAX_BUFFER_SIZE];
+    wchar_t temp_wchar_buffer[MAX_BUFFER_SIZE];
+    unsigned char temp_char_buffer[MAX_BUFFER_SIZE];
 };
 
 #endif // _HIDAPI_PY_HID_DEVICE_H_
