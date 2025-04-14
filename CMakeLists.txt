@@ -9,6 +9,14 @@ endif(NOT DEPS_FOLDER)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(/O2 /Oi /arch:AVX2)
+
+    # /O2 = Optimize for speed
+    # /Oi = Enable intrinsics
+    # /arch:AVX2 = Enable AVX2 instructions (or SSE2, etc.)
+endif()
+
 # Find Python
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 
