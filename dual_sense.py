@@ -1,9 +1,7 @@
-import math
 import time
 import signal
 from typing import Any
 from threading import Event
-from dataclasses import dataclass
 
 from hidapi_py import HidDevice, get_all_device_infos
 
@@ -55,7 +53,8 @@ xbox_controller_product_id: int = 0x028E
 # sony_device_infos = get_all_device_infos(sony_vendor_id, ds_product_id)
 sony_device_infos = get_all_device_infos(ms_vendor_id, xbox_controller_product_id)
 device = HidDevice(sony_device_infos[0].path)
-device.open()
+print(device.open())
+print("Device opened:", device.get_product())
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, lambda sig,
@@ -63,10 +62,10 @@ if __name__ == '__main__':
 
     report = Usb01InReport(bytearray(100))
     while not exit_event.is_set():
-        start = time.perf_counter()
+        print("Waiting for data...")
         data = device.read()
-        print(data)
-        changes = report.update(data)
+        print("Data received:", data)
+        # changes = report.update(data)
         # if 'buttons_0' in changes:            
         #     buttons_0 = report.buttons_0
         #     dpad_data = buttons_0 & 0b1111
@@ -136,6 +135,6 @@ if __name__ == '__main__':
         #     if gyro_z > 0x7FFF:
         #         gyro_z -= 0x10000
         #     print('Accel Y:', gyro_z)
-        dual_sense_controller: DualSenseController = DualSenseController()
-        dual_sense_controller.circle_pressed(lambda: print("Circle pressed!"))
-        dual_sense_controller.square_pressed(lambda: print("Square pressed!"))
+        # dual_sense_controller: DualSenseController = DualSenseController()
+        # dual_sense_controller.circle_pressed(lambda: print("Circle pressed!"))
+        # dual_sense_controller.square_pressed(lambda: print("Square pressed!"))
