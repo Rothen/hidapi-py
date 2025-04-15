@@ -3,7 +3,7 @@ import time
 from threading import Thread, Event
 
 from reactivex.abc import DisposableBase
-from hidapi_py import HidDevice
+from hidapi_py import HidDevice, HidDeviceInfo
 
 from .readable_value import ReadableValue, ButtonValue, ChangeCallable, ButtonPressedCallable, ButtonReleasedCallable
 from .in_report import InReport, Usb01InReport, Bt01InReport, Bt31InReport, InReportLength, InvalidInReportLengthException
@@ -82,8 +82,8 @@ class DualSenseController:
     def loop_time(self) -> float:
         return self.__loop_time
 
-    def __init__(self, hid_device: HidDevice) -> None:
-        self._hid_device: Final[HidDevice] = hid_device
+    def __init__(self, hid_device_info: HidDeviceInfo) -> None:
+        self._hid_device: Final[HidDevice] = HidDevice(hid_device_info.path)
         self._read_thread: Final[Thread] = Thread(target=self._read_loop, daemon=True)
         self._exit_event: Final[Event] = Event()
 
