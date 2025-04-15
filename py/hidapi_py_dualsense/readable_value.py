@@ -46,7 +46,7 @@ class ReadableValue(Generic[T]):
 
         return has_changed
     
-    def _subscribe(self, callback: ChangeCallable[T]) -> DisposableBase:
+    def subscribe(self, callback: ChangeCallable[T]) -> DisposableBase:
         """Subscribe to changes in the value.
 
         Args:

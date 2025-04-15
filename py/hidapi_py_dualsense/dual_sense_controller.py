@@ -5,10 +5,9 @@ from threading import Thread, Event
 from reactivex.abc import DisposableBase
 from hidapi_py import HidDevice
 
-from .readable_value import ReadableValue, ButtonValue, ButtonPressedCallable, ButtonReleasedCallable
+from .readable_value import ReadableValue, ButtonValue, ChangeCallable, ButtonPressedCallable, ButtonReleasedCallable
 from .in_report import InReport, Usb01InReport, Bt01InReport, Bt31InReport
 from .out_report import OutReport, Usb01OutReport, Bt01OutReport, Bt31OutReport
-
 from .states import (
     Accelerometer,
     Battery,
@@ -18,8 +17,6 @@ from .states import (
     TouchFinger,
     TriggerFeedback
 )
-
-
 from .mapping import (
     uint8_value_mapping,
     uint8_bit_to_bool,
@@ -33,6 +30,7 @@ from .mapping import (
     create_joy_stick
 )
 
+
 class DualSenseController:
     __slots__ = (
         "_hid_device",
@@ -41,7 +39,7 @@ class DualSenseController:
         "_read_thread",
         "_exit_event",
         "_start",
-        "_last_read_time"
+        "_last_read_time",
         "_square",
         "_cross",
         "_circle",
@@ -73,7 +71,17 @@ class DualSenseController:
         "_left_trigger_feedback",
         "_right_trigger_feedback",
         "_orientation",
+        "__read_time",
+        "__loop_time"
     )
+
+    @property
+    def read_time(self) -> float:
+        return self.__read_time
+    
+    @property
+    def loop_time(self) -> float:
+        return self.__loop_time
 
     def __init__(self, hid_device: HidDevice) -> None:
         self._hid_device: Final[HidDevice] = hid_device
@@ -83,6 +91,7 @@ class DualSenseController:
         self._exit_event: Final[Event] = Event()
         self._start: float = 0.0
         self._last_read_time: float = 0.0
+        self.__loop_time: float = -1.0
     
         self._square: Final[ButtonValue] = ButtonValue()
         self._cross: Final[ButtonValue] = ButtonValue()
@@ -126,9 +135,9 @@ class DualSenseController:
     
     def _read_loop(self) -> None:
         while not self._exit_event.is_set():
-            self._start = time.perf_counter()
-            read_time = time.perf_counter()
+            start = time.perf_counter()
             self._hid_device.read(self._in_report.data)
+            self.__read_time = (time.perf_counter() - start) * 1000.0
 
             self._square.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.SQUARE_BIT))
             self._cross.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.CROSS_BIT))
@@ -153,31 +162,22 @@ class DualSenseController:
             self._ps.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.PS_BIT))
             self._touch.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.TOUCH_BIT))
             self._mikrophone.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.MIKROPHONE_BIT))
-
             self._left_joy_stick.set_value(create_joy_stick(self._in_report.axes_0, self._in_report.axes_1))
             self._right_joy_stick.set_value(create_joy_stick(self._in_report.axes_2, self._in_report.axes_3))
-            
             self._l2_trigger.set_value(uint8_to_float(self._in_report.axes_4, (0.0, 1.0)))
             self._r2_trigger.set_value(uint8_to_float(self._in_report.axes_5, (0.0, 1.0)))
-                    
             self._accelerometer.set_value(create_accelerometer(x_0=self._in_report.accel_x_0, x_1=self._in_report.accel_x_1, y_0=self._in_report.accel_y_0, y_1=self._in_report.accel_y_1, z_0=self._in_report.accel_z_0, z_1=self._in_report.accel_z_1))
-
             self._gyroscope.set_value(create_gyroscope(x_0=self._in_report.gyro_x_0, x_1=self._in_report.gyro_x_1, y_0=self._in_report.gyro_y_0, y_1=self._in_report.gyro_y_1, z_0=self._in_report.gyro_z_0, z_1=self._in_report.gyro_z_1))
-                    
             self._battery.set_value(create_battery(self._in_report.battery_0, self._in_report.battery_1))
-                    
             self._touch_finger_1.set_value(create_touch_finger(self._in_report.touch_1_0, self._in_report.touch_1_1, self._in_report.touch_1_2, self._in_report.touch_1_3))
-                    
             self._touch_finger_2.set_value(create_touch_finger(self._in_report.touch_2_0, self._in_report.touch_2_1, self._in_report.touch_2_2, self._in_report.touch_2_3))
-                    
             self._left_trigger_feedback.set_value(create_trigger_feedback(self._in_report.left_trigger_feedback))
-                    
             self._right_trigger_feedback.set_value(create_trigger_feedback(self._in_report.right_trigger_feedback))
-            
-            self._orientation.set_value(create_orientation(self._orientation.value, self._accelerometer.value, self._gyroscope.value, (read_time - self._last_read_time) if self._last_read_time else 0.0))
-            
-            self._last_read_time = read_time
-            # end = time.perf_counter()
+            self._orientation.set_value(create_orientation(self._orientation.value, self._accelerometer.value, self._gyroscope.value, (start - self._last_read_time) if self._last_read_time else 0.0))
+
+            self._last_read_time = start
+            self.__loop_time = (time.perf_counter() - start) * 1000.0
+
         self._hid_device.close()
 
     def square_pressed(self, callback: ButtonPressedCallable) -> DisposableBase:
@@ -293,3 +293,39 @@ class DualSenseController:
 
     def mikrophone_released(self, callback: ButtonReleasedCallable) -> DisposableBase:
         return self._mikrophone.released(callback)
+
+    def left_joy_stick_changed(self, callback: ChangeCallable[JoyStick]) -> DisposableBase:
+        return self._left_joy_stick.subscribe(callback)
+
+    def right_joy_stick_changed(self, callback: ChangeCallable[JoyStick]) -> DisposableBase:
+        return self._right_joy_stick.subscribe(callback)
+
+    def l2_trigger_changed(self, callback: ChangeCallable[float]) -> DisposableBase:
+        return self._l2_trigger.subscribe(callback)
+
+    def r2_trigger_changed(self, callback: ChangeCallable[float]) -> DisposableBase:
+        return self._r2_trigger.subscribe(callback)
+
+    def accelerometer_changed(self, callback: ChangeCallable[Accelerometer]) -> DisposableBase:
+        return self._accelerometer.subscribe(callback)
+
+    def gyroscope_changed(self, callback: ChangeCallable[Gyroscope]) -> DisposableBase:
+        return self._gyroscope.subscribe(callback)
+
+    def battery_changed(self, callback: ChangeCallable[Battery]) -> DisposableBase:
+        return self._battery.subscribe(callback)
+
+    def touch_finger_1_changed(self, callback: ChangeCallable[TouchFinger]) -> DisposableBase:
+        return self._touch_finger_1.subscribe(callback)
+
+    def touch_finger_2_changed(self, callback: ChangeCallable[TouchFinger]) -> DisposableBase:
+        return self._touch_finger_2.subscribe(callback)
+
+    def left_trigger_feedback_changed(self, callback: ChangeCallable[TriggerFeedback]) -> DisposableBase:
+        return self._left_trigger_feedback.subscribe(callback)
+
+    def right_trigger_feedback_changed(self, callback: ChangeCallable[TriggerFeedback]) -> DisposableBase:
+        return self._right_trigger_feedback.subscribe(callback)
+
+    def orientation_changed(self, callback: ChangeCallable[Orientation]) -> DisposableBase:
+        return self._orientation.subscribe(callback)
