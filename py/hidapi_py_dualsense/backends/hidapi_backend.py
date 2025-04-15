@@ -103,3 +103,6 @@ class HidAPIBackend(Backend[HidDeviceInfo]):
         Write data to the device.
         """
         pass
+
+    def set_led(self, r: int, g: int, b: int) -> None:
+        pass

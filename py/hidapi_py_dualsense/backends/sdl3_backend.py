@@ -5,6 +5,7 @@ import math
 from sdl3 import *
 
 from .backend import Backend
+from .out_report import Usb01OutReport
 from ..readable_value import ReadableValue, ButtonValue
 from ..states import (
     Accelerometer,
@@ -167,3 +168,16 @@ class SDL3Backend(Backend[SDL_Gamepad]):
                 roll=roll,
                 yaw=yaw
             ))
+    
+    def set_led(self, r: int, g: int, b: int) -> bool:
+        return SDL_SetGamepadLED(self.__sdl_opened_gamepad, r, g, b)
+        
+    
+    def test(self) -> None:
+        out_report = Usb01OutReport()
+        out_report.microphone_led = 0x01
+        data = bytes(out_report.data())
+        effect_data = data
+        buffer = ctypes.create_string_buffer(effect_data)
+        SDL_SendGamepadEffect(self.__sdl_opened_gamepad, buffer, len(effect_data))
+        # SDL_RumbleGamepadTriggers

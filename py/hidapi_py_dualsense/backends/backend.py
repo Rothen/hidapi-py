@@ -53,6 +53,12 @@ class Backend(ABC, Generic[DeviceType]):
         """
         Write data to the device.
         """
+
+    @abstractmethod
+    def set_led(self, r: int, g: int, b: int) -> None:
+        """
+        Set the LED color of the device.
+        """
     
     __slots__ = (
         "_read_time",

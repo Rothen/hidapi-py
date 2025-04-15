@@ -240,3 +240,6 @@ class DualSenseController:
 
     def orientation_changed(self, callback: ChangeCallable[Orientation]) -> DisposableBase:
         return self._backend.orientation.subscribe(callback)
+
+    def set_led(self, red: int, green: int, blue: int) -> None:
+        self._backend.set_led(red, green, blue)

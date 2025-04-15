@@ -2,8 +2,7 @@ import signal
 import time
 from typing import Any
 from threading import Event
-
-from sdl3 import SDL_Init, SDL_INIT_GAMEPAD, SDL_Gamepad
+from sdl3 import SDL_Init, SDL_INIT_GAMEPAD
 
 from py.hidapi_py_dualsense import DualSenseController
 from py.hidapi_py_dualsense.backends import SDL3Backend
@@ -16,7 +15,6 @@ def signal_handler(sig: int, frame: Any, controller: DualSenseController) -> Non
     controller.close()
     exit_event.set()
 
-
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, controller))
 
@@ -25,6 +23,7 @@ if __name__ == '__main__':
     Backend = SDL3Backend
     
     device = Backend.get_available_devices()[0]
+    backend = Backend(device)
     controller = DualSenseController(Backend(device))
     controller.open()
     controller.square_pressed(lambda: print("Square"))
@@ -51,6 +50,8 @@ if __name__ == '__main__':
     # controller.l2_trigger_changed(lambda value: print("L2 Grad", value))
     # controller.r2_trigger_changed(lambda value: print("R2 Grad", value))
     # controller.orientation_changed(lambda orientation: print(orientation))
+    controller.set_led(255, 0, 0)
+    backend.test()
 
     while not exit_event.is_set():
         time.sleep(0.1)
