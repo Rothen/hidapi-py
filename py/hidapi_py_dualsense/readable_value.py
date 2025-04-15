@@ -45,6 +45,19 @@ class ReadableValue(Generic[T]):
             self._change.on_next(value)
 
         return has_changed
+
+    def force_value(self, value: T) -> None:
+        """Set the value of the ReadableValue and notify subscribers.
+
+        Args:
+            value (T): The new value to set.
+        
+        Returns:
+            bool: True if the value has changed, False otherwise.
+        """
+        self._value = value
+
+        self._change.on_next(value)
     
     def subscribe(self, callback: ChangeCallable[T]) -> DisposableBase:
         """Subscribe to changes in the value.
@@ -83,6 +96,14 @@ class ButtonValue(ReadableValue[bool]):
             self.released_subject.on_next(value)
 
         return True
+
+    def force_value(self, value: bool) -> None:
+        super().set_value(value)
+
+        if value:
+            self.pressed_subject.on_next(value)
+        else:
+            self.released_subject.on_next(value)
     
     def pressed(self, callback: ButtonPressedCallable) -> DisposableBase:
         """Subscribe to pressed events."""
