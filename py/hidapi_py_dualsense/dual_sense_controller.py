@@ -6,7 +6,7 @@ from reactivex.abc import DisposableBase
 from hidapi_py import HidDevice
 
 from .readable_value import ReadableValue, ButtonValue, ChangeCallable, ButtonPressedCallable, ButtonReleasedCallable
-from .in_report import InReport, Usb01InReport, Bt01InReport, Bt31InReport
+from .in_report import InReport, Usb01InReport, Bt01InReport, Bt31InReport, InReportLength, InvalidInReportLengthException
 from .out_report import OutReport, Usb01OutReport, Bt01OutReport, Bt31OutReport
 from .states import (
     Accelerometer,
@@ -34,12 +34,11 @@ from .mapping import (
 class DualSenseController:
     __slots__ = (
         "_hid_device",
-        "_in_report",
-        "_out_report",
+        "__in_report",
+        "__out_report",
         "_read_thread",
         "_exit_event",
-        "_start",
-        "_last_read_time",
+        "__last_read_time",
         "_square",
         "_cross",
         "_circle",
@@ -85,12 +84,12 @@ class DualSenseController:
 
     def __init__(self, hid_device: HidDevice) -> None:
         self._hid_device: Final[HidDevice] = hid_device
-        self._in_report: Final[InReport] = Usb01InReport()
-        self._out_report : Final[OutReport] = Usb01OutReport()
         self._read_thread: Final[Thread] = Thread(target=self._read_loop, daemon=True)
         self._exit_event: Final[Event] = Event()
-        self._start: float = 0.0
-        self._last_read_time: float = 0.0
+
+        self.__in_report: InReport | None = None
+        self.__out_report : OutReport | None = None
+        self.__last_read_time: float = 0.0
         self.__loop_time: float = -1.0
     
         self._square: Final[ButtonValue] = ButtonValue()
@@ -134,48 +133,63 @@ class DualSenseController:
         self._read_thread.join()
     
     def _read_loop(self) -> None:
+        data = self._hid_device.read()
+        
+        match len(data):
+            case InReportLength.USB_01:
+                self.__in_report = Usb01InReport()
+                self.__out_report = Usb01OutReport()
+            case InReportLength.BT_31:
+                self.__in_report = Bt31InReport()
+                self.__out_report = Bt31OutReport()
+            case InReportLength.BT_01:
+                self.__in_report = Bt01InReport()
+                self.__out_report = Bt01OutReport()
+            case _:
+                raise InvalidInReportLengthException
+        
         while not self._exit_event.is_set():
             start = time.perf_counter()
-            self._hid_device.read(self._in_report.data)
+            self._hid_device.read(self.__in_report.data)
             self.__read_time = (time.perf_counter() - start) * 1000.0
 
-            self._square.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.SQUARE_BIT))
-            self._cross.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.CROSS_BIT))
-            self._circle.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.CIRCLE_BIT))
-            self._triangle.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.TRIANGLE_BIT))
+            self._square.set_value(uint8_bit_to_bool(self.__in_report.buttons_0, InReport.SQUARE_BIT))
+            self._cross.set_value(uint8_bit_to_bool(self.__in_report.buttons_0, InReport.CROSS_BIT))
+            self._circle.set_value(uint8_bit_to_bool(self.__in_report.buttons_0, InReport.CIRCLE_BIT))
+            self._triangle.set_value(uint8_bit_to_bool(self.__in_report.buttons_0, InReport.TRIANGLE_BIT))
             
             for button_value, value in zip(
                     [self._dpad_up, self._dpad_right, self._dpad_down, self._dpad_left],
-                    uint8_value_mapping(self._in_report.buttons_0 & 0b1111, InReport.DPAD_MAPPING)
+                    uint8_value_mapping(self.__in_report.buttons_0 & 0b1111, InReport.DPAD_MAPPING)
                 ):
                 button_value.set_value(value)
             
             
-            self._l1.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.L1_BIT))
-            self._r1.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.R1_BIT))
-            self._l2.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.L2_BIT))
-            self._r2.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.R2_BIT))
-            self._share.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.SHARE_BIT))
-            self._options.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.OPTIONS_BIT))
-            self._l3.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.L3_BIT))
-            self._r3.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.R3_BIT))
-            self._ps.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.PS_BIT))
-            self._touch.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.TOUCH_BIT))
-            self._mikrophone.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.MIKROPHONE_BIT))
-            self._left_joy_stick.set_value(create_joy_stick(self._in_report.axes_0, self._in_report.axes_1))
-            self._right_joy_stick.set_value(create_joy_stick(self._in_report.axes_2, self._in_report.axes_3))
-            self._l2_trigger.set_value(uint8_to_float(self._in_report.axes_4, (0.0, 1.0)))
-            self._r2_trigger.set_value(uint8_to_float(self._in_report.axes_5, (0.0, 1.0)))
-            self._accelerometer.set_value(create_accelerometer(x_0=self._in_report.accel_x_0, x_1=self._in_report.accel_x_1, y_0=self._in_report.accel_y_0, y_1=self._in_report.accel_y_1, z_0=self._in_report.accel_z_0, z_1=self._in_report.accel_z_1))
-            self._gyroscope.set_value(create_gyroscope(x_0=self._in_report.gyro_x_0, x_1=self._in_report.gyro_x_1, y_0=self._in_report.gyro_y_0, y_1=self._in_report.gyro_y_1, z_0=self._in_report.gyro_z_0, z_1=self._in_report.gyro_z_1))
-            self._battery.set_value(create_battery(self._in_report.battery_0, self._in_report.battery_1))
-            self._touch_finger_1.set_value(create_touch_finger(self._in_report.touch_1_0, self._in_report.touch_1_1, self._in_report.touch_1_2, self._in_report.touch_1_3))
-            self._touch_finger_2.set_value(create_touch_finger(self._in_report.touch_2_0, self._in_report.touch_2_1, self._in_report.touch_2_2, self._in_report.touch_2_3))
-            self._left_trigger_feedback.set_value(create_trigger_feedback(self._in_report.left_trigger_feedback))
-            self._right_trigger_feedback.set_value(create_trigger_feedback(self._in_report.right_trigger_feedback))
-            self._orientation.set_value(create_orientation(self._orientation.value, self._accelerometer.value, self._gyroscope.value, (start - self._last_read_time) if self._last_read_time else 0.0))
+            self._l1.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.L1_BIT))
+            self._r1.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.R1_BIT))
+            self._l2.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.L2_BIT))
+            self._r2.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.R2_BIT))
+            self._share.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.SHARE_BIT))
+            self._options.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.OPTIONS_BIT))
+            self._l3.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.L3_BIT))
+            self._r3.set_value(uint8_bit_to_bool(self.__in_report.buttons_1, InReport.R3_BIT))
+            self._ps.set_value(uint8_bit_to_bool(self.__in_report.buttons_2, InReport.PS_BIT))
+            self._touch.set_value(uint8_bit_to_bool(self.__in_report.buttons_2, InReport.TOUCH_BIT))
+            self._mikrophone.set_value(uint8_bit_to_bool(self.__in_report.buttons_2, InReport.MIKROPHONE_BIT))
+            self._left_joy_stick.set_value(create_joy_stick(self.__in_report.axes_0, self.__in_report.axes_1))
+            self._right_joy_stick.set_value(create_joy_stick(self.__in_report.axes_2, self.__in_report.axes_3))
+            self._l2_trigger.set_value(uint8_to_float(self.__in_report.axes_4, (0.0, 1.0)))
+            self._r2_trigger.set_value(uint8_to_float(self.__in_report.axes_5, (0.0, 1.0)))
+            self._accelerometer.set_value(create_accelerometer(x_0=self.__in_report.accel_x_0, x_1=self.__in_report.accel_x_1, y_0=self.__in_report.accel_y_0, y_1=self.__in_report.accel_y_1, z_0=self.__in_report.accel_z_0, z_1=self.__in_report.accel_z_1))
+            self._gyroscope.set_value(create_gyroscope(x_0=self.__in_report.gyro_x_0, x_1=self.__in_report.gyro_x_1, y_0=self.__in_report.gyro_y_0, y_1=self.__in_report.gyro_y_1, z_0=self.__in_report.gyro_z_0, z_1=self.__in_report.gyro_z_1))
+            self._battery.set_value(create_battery(self.__in_report.battery_0, self.__in_report.battery_1))
+            self._touch_finger_1.set_value(create_touch_finger(self.__in_report.touch_1_0, self.__in_report.touch_1_1, self.__in_report.touch_1_2, self.__in_report.touch_1_3))
+            self._touch_finger_2.set_value(create_touch_finger(self.__in_report.touch_2_0, self.__in_report.touch_2_1, self.__in_report.touch_2_2, self.__in_report.touch_2_3))
+            self._left_trigger_feedback.set_value(create_trigger_feedback(self.__in_report.left_trigger_feedback))
+            self._right_trigger_feedback.set_value(create_trigger_feedback(self.__in_report.right_trigger_feedback))
+            self._orientation.set_value(create_orientation(self._orientation.value, self._accelerometer.value, self._gyroscope.value, (start - self.__last_read_time) if self.__last_read_time else 0.0))
 
-            self._last_read_time = start
+            self.__last_read_time = start
             self.__loop_time = (time.perf_counter() - start) * 1000.0
 
         self._hid_device.close()

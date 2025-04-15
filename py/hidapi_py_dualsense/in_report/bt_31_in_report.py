@@ -1,4 +1,5 @@
 from .in_report import InReport, BytesLike
+from .enums import InReportLength
 
 
 # ??? byte 0
@@ -10,7 +11,7 @@ from .in_report import InReport, BytesLike
 # ??? bytes 55-76
 class Bt31InReport(InReport):
 
-    def __init__(self, data: BytesLike):
+    def __init__(self, data: BytesLike = bytearray(InReportLength.BT_31)):
         super().__init__({
             "axes_0": 1, "axes_1": 2, "axes_2": 3, "axes_3": 4, "axes_4": 5, "axes_5": 6,
             "buttons_0": 8, "buttons_1": 9, "buttons_2": 10,
