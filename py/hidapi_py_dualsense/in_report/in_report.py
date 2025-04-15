@@ -1,12 +1,50 @@
+from __future__ import annotations
+
 from abc import ABC
 from typing import Final, TypeAlias
 
 _IndexDict = dict[str, int]
-BytesLike: TypeAlias = bytes | bytearray
+BytesLike: TypeAlias = bytearray
+
+DPAD_UP_BIT_MASK: Final[int] = 0b0000
+DPAD_RIGHT_BIT_MASK: Final[int] = 0b0010
+DPAD_DOWN_BIT_MASK: Final[int] = 0b0100
+DPAD_LEFT_BIT_MASK: Final[int] = 0b0110
+DPAD_NE_BIT_MASK: Final[int] = 0b0001
+DPAD_SE_BIT_MASK: Final[int] = 0b0011
+DPAD_SW_BIT_MASK: Final[int] = 0b0101
+DPAD_NW_BIT_MASK: Final[int] = 0b0111
 
 
 class InReport(ABC):
     _OFFSET: Final[int] = 1
+
+    SQUARE_BIT: int = 4
+    CROSS_BIT: int = 5
+    CIRCLE_BIT: int = 6
+    TRIANGLE_BIT: int = 7
+
+    # buttons 1
+    L1_BIT: int = 0
+    R1_BIT: int = 1
+    L2_BIT: int = 2
+    R2_BIT: int = 3
+    SHARE_BIT: int = 4
+    OPTIONS_BIT: int = 5
+    L3_BIT: int = 6
+    R3_BIT: int = 7
+
+    # buttons 2
+    PS_BIT: int = 0
+    TOUCH_BIT: int = 1
+    MIKROPHONE_BIT: int = 2
+
+    DPAD_MAPPING: list[list[int]] = [
+        [DPAD_UP_BIT_MASK, DPAD_NE_BIT_MASK, DPAD_NW_BIT_MASK],
+        [DPAD_RIGHT_BIT_MASK, DPAD_NE_BIT_MASK, DPAD_SE_BIT_MASK],
+        [DPAD_DOWN_BIT_MASK, DPAD_SE_BIT_MASK, DPAD_SW_BIT_MASK],
+        [DPAD_LEFT_BIT_MASK, DPAD_NW_BIT_MASK, DPAD_SW_BIT_MASK]
+    ]
 
     @property
     def data(self) -> BytesLike:
@@ -16,13 +54,8 @@ class InReport(ABC):
         self._index_dict: Final[_IndexDict] = index_dict
         self._data: BytesLike = data
 
-    def update(self, data: BytesLike) -> list[str]:
-        changes: list[str] = []
-        for key in self._index_dict:
-            if self._data[InReport._OFFSET + self._index_dict.get(key)] != data[InReport._OFFSET + self._index_dict.get(key)]:
-                changes.append(key)
+    def update(self, data: BytesLike) -> None:
         self._data = data
-        return changes
 
     def _get_uint8(self, key: str) -> int:
         return self._data[InReport._OFFSET + self._index_dict.get(key)]
@@ -31,6 +64,49 @@ class InReport(ABC):
         self._data[InReport._OFFSET + self._index_dict.get(key)] = value
 
     # ########################################## GET ##########################################
+    @property
+    def unknown_0(self) -> int:
+        return self._get_uint8('unknown_0')
+    
+    @property
+    def unknown_1(self) -> int: # Something to do with the touchpad
+        return self._get_uint8('unknown_1')
+    
+    @property
+    def unknown_2(self) -> int:
+        return self._get_uint8('unknown_2')
+    
+    @property
+    def unknown_3(self) -> int:
+        return self._get_uint8('unknown_3')
+    
+    @property
+    def unknown_4(self) -> int:
+        return self._get_uint8('unknown_4')
+    
+    @property
+    def unknown_5(self) -> int:
+        return self._get_uint8('unknown_5')
+    
+    @property
+    def unknown_6(self) -> int:
+        return self._get_uint8('unknown_6')
+    
+    @property
+    def unknown_7(self) -> int:
+        return self._get_uint8('unknown_7')
+    
+    @property
+    def unknown_8(self) -> int:
+        return self._get_uint8('unknown_8')
+    
+    @property
+    def unknown_9(self) -> int:
+        return self._get_uint8('unknown_9')
+    
+    @property
+    def unknown_10(self) -> int:
+        return self._get_uint8('unknown_10')
 
     @property
     def axes_0(self) -> int:

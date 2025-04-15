@@ -1,5 +1,5 @@
-from dualsense_controller.core.report.out_report.OutReport import OutReport
-from dualsense_controller.core.report.out_report.enum import OutReportLength
+from .out_report import OutReport
+from .enums import OutReportLength
 
 
 class Bt01OutReport(OutReport):

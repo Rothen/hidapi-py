@@ -1,11 +1,47 @@
 from typing import Final
+import time
+from threading import Thread, Event
 
 from reactivex.abc import DisposableBase
+from hidapi_py import HidDevice
 
-from .readable_value import ButtonValue, ButtonPressedCallable, ButtonReleasedCallable
+from .readable_value import ReadableValue, ButtonValue, ButtonPressedCallable, ButtonReleasedCallable
+from .in_report import InReport, Usb01InReport, Bt01InReport, Bt31InReport
+from .out_report import OutReport, Usb01OutReport, Bt01OutReport, Bt31OutReport
+
+from .states import (
+    Accelerometer,
+    Battery,
+    Gyroscope,
+    JoyStick,
+    Orientation,
+    TouchFinger,
+    TriggerFeedback
+)
+
+
+from .mapping import (
+    uint8_value_mapping,
+    uint8_bit_to_bool,
+    create_battery,
+    create_touch_finger,
+    uint8_to_float,
+    create_accelerometer,
+    create_gyroscope,
+    create_trigger_feedback,
+    create_orientation,
+    create_joy_stick
+)
 
 class DualSenseController:
     __slots__ = (
+        "_hid_device",
+        "_in_report",
+        "_out_report",
+        "_read_thread",
+        "_exit_event",
+        "_start",
+        "_last_read_time"
         "_square",
         "_cross",
         "_circle",
@@ -25,9 +61,29 @@ class DualSenseController:
         "_ps",
         "_touch",
         "_mikrophone",
+        "_left_joy_stick",
+        "_right_joy_stick",
+        "_l2_trigger",
+        "_r2_trigger",
+        "_accelerometer",
+        "_gyroscope",
+        "_battery",
+        "_touch_finger_1",
+        "_touch_finger_2",
+        "_left_trigger_feedback",
+        "_right_trigger_feedback",
+        "_orientation",
     )
 
-    def __init__(self):
+    def __init__(self, hid_device: HidDevice) -> None:
+        self._hid_device: Final[HidDevice] = hid_device
+        self._in_report: Final[InReport] = Usb01InReport()
+        self._out_report : Final[OutReport] = Usb01OutReport()
+        self._read_thread: Final[Thread] = Thread(target=self._read_loop, daemon=True)
+        self._exit_event: Final[Event] = Event()
+        self._start: float = 0.0
+        self._last_read_time: float = 0.0
+    
         self._square: Final[ButtonValue] = ButtonValue()
         self._cross: Final[ButtonValue] = ButtonValue()
         self._circle: Final[ButtonValue] = ButtonValue()
@@ -47,120 +103,82 @@ class DualSenseController:
         self._ps: Final[ButtonValue] = ButtonValue()
         self._touch: Final[ButtonValue] = ButtonValue()
         self._mikrophone: Final[ButtonValue] = ButtonValue()
-        
-    def press_square(self) -> None:
-        self._square.set_value(True)
+        self._left_joy_stick: Final[ReadableValue[JoyStick]] = ReadableValue[JoyStick](JoyStick())
+        self._right_joy_stick: Final[ReadableValue[JoyStick]] = ReadableValue[JoyStick](JoyStick())
+        self._l2_trigger: Final[ReadableValue[float]] = ReadableValue[float](0.0)
+        self._r2_trigger: Final[ReadableValue[float]] = ReadableValue[float](0.0)
+        self._accelerometer: Final[ReadableValue[Accelerometer]] = ReadableValue[Accelerometer](Accelerometer())
+        self._gyroscope: Final[ReadableValue[Gyroscope]] = ReadableValue[Gyroscope](Gyroscope())
+        self._battery: Final[ReadableValue[Battery]] = ReadableValue[Battery](Battery())
+        self._touch_finger_1: Final[ReadableValue[TouchFinger]] = ReadableValue[TouchFinger](TouchFinger())
+        self._touch_finger_2: Final[ReadableValue[TouchFinger]] = ReadableValue[TouchFinger](TouchFinger())
+        self._left_trigger_feedback: Final[ReadableValue[TriggerFeedback]] = ReadableValue[TriggerFeedback](TriggerFeedback())
+        self._right_trigger_feedback: Final[ReadableValue[TriggerFeedback]] = ReadableValue[TriggerFeedback](TriggerFeedback())
+        self._orientation: Final[ReadableValue[Orientation]] = ReadableValue[Orientation](Orientation())
+    
+    def open(self):
+        self._hid_device.open()
+        self._read_thread.start()
 
-    def release_square(self) -> None:
-        self._square.set_value(False)
+    def close(self):
+        self._exit_event.set()
+        self._read_thread.join()
+    
+    def _read_loop(self) -> None:
+        while not self._exit_event.is_set():
+            self._start = time.perf_counter()
+            read_time = time.perf_counter()
+            self._hid_device.read(self._in_report.data)
 
-    def press_cross(self) -> None:
-        self._cross.set_value(True)
+            self._square.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.SQUARE_BIT))
+            self._cross.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.CROSS_BIT))
+            self._circle.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.CIRCLE_BIT))
+            self._triangle.set_value(uint8_bit_to_bool(self._in_report.buttons_0, InReport.TRIANGLE_BIT))
+            
+            for button_value, value in zip(
+                    [self._dpad_up, self._dpad_right, self._dpad_down, self._dpad_left],
+                    uint8_value_mapping(self._in_report.buttons_0 & 0b1111, InReport.DPAD_MAPPING)
+                ):
+                button_value.set_value(value)
+            
+            
+            self._l1.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.L1_BIT))
+            self._r1.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.R1_BIT))
+            self._l2.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.L2_BIT))
+            self._r2.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.R2_BIT))
+            self._share.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.SHARE_BIT))
+            self._options.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.OPTIONS_BIT))
+            self._l3.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.L3_BIT))
+            self._r3.set_value(uint8_bit_to_bool(self._in_report.buttons_1, InReport.R3_BIT))
+            self._ps.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.PS_BIT))
+            self._touch.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.TOUCH_BIT))
+            self._mikrophone.set_value(uint8_bit_to_bool(self._in_report.buttons_2, InReport.MIKROPHONE_BIT))
 
-    def release_cross(self) -> None:
-        self._cross.set_value(False)
+            self._left_joy_stick.set_value(create_joy_stick(self._in_report.axes_0, self._in_report.axes_1))
+            self._right_joy_stick.set_value(create_joy_stick(self._in_report.axes_2, self._in_report.axes_3))
+            
+            self._l2_trigger.set_value(uint8_to_float(self._in_report.axes_4, (0.0, 1.0)))
+            self._r2_trigger.set_value(uint8_to_float(self._in_report.axes_5, (0.0, 1.0)))
+                    
+            self._accelerometer.set_value(create_accelerometer(x_0=self._in_report.accel_x_0, x_1=self._in_report.accel_x_1, y_0=self._in_report.accel_y_0, y_1=self._in_report.accel_y_1, z_0=self._in_report.accel_z_0, z_1=self._in_report.accel_z_1))
 
-    def press_circle(self) -> None:
-        self._circle.set_value(True)
-
-    def release_circle(self) -> None:
-        self._circle.set_value(False)
-
-    def press_triangle(self) -> None:
-        self._triangle.set_value(True)
-
-    def release_triangle(self) -> None:
-        self._triangle.set_value(False)
-
-    def press_dpad_up(self) -> None:
-        self._dpad_up.set_value(True)
-
-    def release_dpad_up(self) -> None:
-        self._dpad_up.set_value(False)
-
-    def press_dpad_right(self) -> None:
-        self._dpad_right.set_value(True)
-
-    def release_dpad_right(self) -> None:
-        self._dpad_right.set_value(False)
-
-    def press_dpad_down(self) -> None:
-        self._dpad_down.set_value(True)
-
-    def release_dpad_down(self) -> None:
-        self._dpad_down.set_value(False)
-
-    def press_dpad_left(self) -> None:
-        self._dpad_left.set_value(True)
-
-    def release_dpad_left(self) -> None:
-        self._dpad_left.set_value(False)
-
-    def press_l1(self) -> None:
-        self._l1.set_value(True)
-
-    def release_l1(self) -> None:
-        self._l1.set_value(False)
-
-    def press_r1(self) -> None:
-        self._r1.set_value(True)
-
-    def release_r1(self) -> None:
-        self._r1.set_value(False)
-
-    def press_l2(self) -> None:
-        self._l2.set_value(True)
-
-    def release_l2(self) -> None:
-        self._l2.set_value(False)
-
-    def press_r2(self) -> None:
-        self._r2.set_value(True)
-
-    def release_r2(self) -> None:
-        self._r2.set_value(False)
-
-    def press_share(self) -> None:
-        self._share.set_value(True)
-
-    def release_share(self) -> None:
-        self._share.set_value(False)
-
-    def press_options(self) -> None:
-        self._options.set_value(True)
-
-    def release_options(self) -> None:
-        self._options.set_value(False)
-
-    def press_l3(self) -> None:
-        self._l3.set_value(True)
-
-    def release_l3(self) -> None:
-        self._l3.set_value(False)
-
-    def press_r3(self) -> None:
-        self._r3.set_value(True)
-
-    def release_r3(self) -> None:
-        self._r3.set_value(False)
-
-    def press_ps(self) -> None:
-        self._ps.set_value(True)
-
-    def release_ps(self) -> None:
-        self._ps.set_value(False)
-
-    def press_touch(self) -> None:
-        self._touch.set_value(True)
-
-    def release_touch(self) -> None:
-        self._touch.set_value(False)
-
-    def press_mikrophone(self) -> None:
-        self._mikrophone.set_value(True)
-
-    def release_mikrophone(self) -> None:
-        self._mikrophone.set_value(False)
+            self._gyroscope.set_value(create_gyroscope(x_0=self._in_report.gyro_x_0, x_1=self._in_report.gyro_x_1, y_0=self._in_report.gyro_y_0, y_1=self._in_report.gyro_y_1, z_0=self._in_report.gyro_z_0, z_1=self._in_report.gyro_z_1))
+                    
+            self._battery.set_value(create_battery(self._in_report.battery_0, self._in_report.battery_1))
+                    
+            self._touch_finger_1.set_value(create_touch_finger(self._in_report.touch_1_0, self._in_report.touch_1_1, self._in_report.touch_1_2, self._in_report.touch_1_3))
+                    
+            self._touch_finger_2.set_value(create_touch_finger(self._in_report.touch_2_0, self._in_report.touch_2_1, self._in_report.touch_2_2, self._in_report.touch_2_3))
+                    
+            self._left_trigger_feedback.set_value(create_trigger_feedback(self._in_report.left_trigger_feedback))
+                    
+            self._right_trigger_feedback.set_value(create_trigger_feedback(self._in_report.right_trigger_feedback))
+            
+            self._orientation.set_value(create_orientation(self._orientation.value, self._accelerometer.value, self._gyroscope.value, (read_time - self._last_read_time) if self._last_read_time else 0.0))
+            
+            self._last_read_time = read_time
+            # end = time.perf_counter()
+        self._hid_device.close()
 
     def square_pressed(self, callback: ButtonPressedCallable) -> DisposableBase:
         return self._square.pressed(callback)

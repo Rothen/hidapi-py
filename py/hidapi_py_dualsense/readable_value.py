@@ -13,6 +13,10 @@ ButtonReleasedCallable: TypeAlias = Callable[[], None]
 class ReadableValue(Generic[T]):
     """A class to represent a readable value from the DualSense controller."""
     __slots__ = ("_change", "_value")
+    
+    @property
+    def value(self) -> T:
+        return self._value
 
     def __init__(self, init_value: T):
         """Initialize the ReadableValue with a name and value.
@@ -24,14 +28,23 @@ class ReadableValue(Generic[T]):
         self._change: Final[Subject[T]] = Subject[T]()
         self._value: T = init_value
     
-    def set_value(self, value: T) -> None:
+    def set_value(self, value: T) -> bool:
         """Set the value of the ReadableValue and notify subscribers.
 
         Args:
             value (T): The new value to set.
+        
+        Returns:
+            bool: True if the value has changed, False otherwise.
         """
+        has_changed = value != self._value
+
         self._value = value
-        self._change.on_next(value)
+        
+        if has_changed:
+            self._change.on_next(value)
+
+        return has_changed
     
     def _subscribe(self, callback: ChangeCallable[T]) -> DisposableBase:
         """Subscribe to changes in the value.
@@ -60,12 +73,16 @@ class ButtonValue(ReadableValue[bool]):
         self.pressed_subject: Final[Subject[bool]] = Subject[bool]()
         self.released_subject: Final[Subject[bool]] = Subject[bool]()
 
-    def set_value(self, value: bool) -> None:
-        super().set_value(value)
+    def set_value(self, value: bool) -> bool:
+        if not super().set_value(value):
+            return False
+
         if value:
             self.pressed_subject.on_next(value)
         else:
             self.released_subject.on_next(value)
+
+        return True
     
     def pressed(self, callback: ButtonPressedCallable) -> DisposableBase:
         """Subscribe to pressed events."""

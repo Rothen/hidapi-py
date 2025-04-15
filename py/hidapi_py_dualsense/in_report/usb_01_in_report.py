@@ -5,7 +5,7 @@ from .in_report import InReport, BytesLike
 # ??? byte 40
 # ??? bytes 43-51
 class Usb01InReport(InReport):
-    def __init__(self, data: BytesLike):
+    def __init__(self, data: BytesLike = bytearray(100)):
         super().__init__({
             "axes_0": 0, "axes_1": 1, "axes_2": 2, "axes_3": 3, "axes_4": 4, "axes_5": 5,
             "seq_num": 6,
@@ -17,5 +17,7 @@ class Usb01InReport(InReport):
             "touch_1_0": 32, "touch_1_1": 33, "touch_1_2": 34, "touch_1_3": 35,
             "touch_2_0": 36, "touch_2_1": 37, "touch_2_2": 38, "touch_2_3": 39,
             "right_trigger_feedback": 41, "left_trigger_feedback": 42,
-            "battery_0": 52, "battery_1": 53
+            "battery_0": 52, "battery_1": 53,
+            "unknown_0": 31, "unknown_1": 40, "unknown_2": 43, "unknown_3": 44, "unknown_4": 45, "unknown_5": 46,
+            "unknown_6": 47, "unknown_7": 48, "unknown_8": 49, "unknown_9": 50, "unknown_10": 51
         }, data=data)
