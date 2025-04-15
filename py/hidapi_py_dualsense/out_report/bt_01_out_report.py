@@ -3,6 +3,6 @@ from .enums import OutReportLength
 
 
 class Bt01OutReport(OutReport):
-    def to_bytes(self) -> bytes:
+    def data(self) -> bytes:
         out_report_bytes: bytes = bytearray(OutReportLength.BT_31)
         return out_report_bytes

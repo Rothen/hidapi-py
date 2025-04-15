@@ -4,7 +4,7 @@ from .utils import clamp_byte
 
 
 class Usb01OutReport(OutReport):
-    def to_bytes(self) -> bytes:
+    def data(self) -> bytes:
         # print("-----------> usb")
 
         # reportId = 0x02

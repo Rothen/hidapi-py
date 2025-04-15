@@ -5,7 +5,7 @@ from .utils import clamp_byte
 
 
 class Bt31OutReport(OutReport):
-    def to_bytes(self) -> bytes:
+    def data(self) -> bytes:
         # print("-----------> BT31")
 
         out_report_bytes: bytearray = bytearray(OutReportLength.BT_31)

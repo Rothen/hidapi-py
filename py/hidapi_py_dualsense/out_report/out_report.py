@@ -16,7 +16,7 @@ from .enums import (
 class OutReport(ABC):
 
     @abstractmethod
-    def to_bytes(self) -> bytes:
+    def data(self) -> bytes:
         pass
 
     operating_mode: int = OperatingMode.DS5_MODE

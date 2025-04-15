@@ -1,5 +1,5 @@
-from typing import Final
 import time
+from typing import Final
 from threading import Thread, Event
 
 from reactivex.abc import DisposableBase
