@@ -29,7 +29,7 @@ class SDL3DeviceInfo(DeviceInfo[LP_SDL_JoystickID, LP_SDL_JoystickID]):
     )
 
     def __init__(self, device_id: LP_SDL_JoystickID):
-        super().__init__(device_id, device_id)
+        super().__init__(device_id)
         self.__sdl_opened_gamepad: LP_SDL_Gamepad | None = None
         self.__button_map: list[ButtonValue] = [
             self._cross,
@@ -57,7 +57,7 @@ class SDL3DeviceInfo(DeviceInfo[LP_SDL_JoystickID, LP_SDL_JoystickID]):
         self.__last_gyro_measurement: float = 0.0
 
     def open(self):
-        self.__sdl_opened_gamepad = SDL_OpenGamepad(self._device_info.id)
+        self.__sdl_opened_gamepad = SDL_OpenGamepad(self._orig_device_info)
         SDL_SetGamepadSensorEnabled(self.__sdl_opened_gamepad, SDL_SENSOR_ACCEL, True)
         SDL_SetGamepadSensorEnabled(self.__sdl_opened_gamepad, SDL_SENSOR_GYRO, True)
 

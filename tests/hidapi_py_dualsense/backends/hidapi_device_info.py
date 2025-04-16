@@ -34,9 +34,9 @@ class HIDAPIDeviceInfo(DeviceInfo[str, HidDeviceInfo]):
         "__out_report",
     )
 
-    def __init__(self, path: str, hid_device_info: HidDeviceInfo):
-        super().__init__(path, hid_device_info)
-        self._hid_device: Final[HidDevice] = HidDevice(path)
+    def __init__(self, hid_device_info: HidDeviceInfo):
+        super().__init__(hid_device_info)
+        self._hid_device: Final[HidDevice] = HidDevice(hid_device_info.path)
         self.__in_report: InReport | None = None
         self.__out_report: OutReport | None = None
 

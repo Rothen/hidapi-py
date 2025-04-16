@@ -58,7 +58,7 @@ class DeviceInfo(Generic[ID, T]):
         """
 
     __slots__ = (
-        "_device_info",
+        "_orig_device_info",
         "_read_time",
         "_last_read_time",
         "_square",

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
 project(hidapi-py)
 
 if(NOT DEPS_FOLDER)
@@ -81,19 +81,14 @@ target_include_directories(hidapi-py PRIVATE ${CMAKE_SOURCE_DIR}/includes)
 target_include_directories(hidapi-py PRIVATE ${HIDAPI_INCLUDE_DIR})
 target_link_libraries(hidapi-py PRIVATE ${HIDAPI_LIBRARY})
 
-SET(COPY_TO_PATH ${CMAKE_SOURCE_DIR}/../src/dualsense_controller/core/hidapi)
-
-if(WIN32)
-    add_custom_command(TARGET hidapi-py POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${HIDAPI_DLL}"
-        ${COPY_TO_PATH}
-        COMMENT "Copying HIDAPI DLL to output directory"
-    )
-endif()
-
 add_custom_command(TARGET hidapi-py POST_BUILD
     VERBATIM COMMAND python -c "import os; import sys; sys.path.insert(1, os.getcwd()) ; from pybind11_stubgen import main; import hidapi_py; sys.argv[0] = 'pybind11-stubgen'; sys.argv.append('--ignore-all-errors') ; sys.argv.append('-o') ; sys.argv.append('.') ; sys.argv.append('hidapi_py') ; main() " ||(exit 0)
     WORKING_DIRECTORY $<TARGET_FILE_DIR:hidapi-py>
     COMMENT "Creating stubs for hidapi-py"
 )
+
+install(TARGETS hidapi-py LIBRARY DESTINATION hidapi_py) # or site-packages path
+install(FILES "$<TARGET_FILE_DIR:hidapi-py>/hidapi_py.pyi" DESTINATION "hidapi_py")
+if(WIN32)
+    install(FILES "$<TARGET_FILE_DIR:hidapi-py>/hidapi.dll" DESTINATION "hidapi_py")
+endif()

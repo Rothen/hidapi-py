@@ -4,9 +4,9 @@ from typing import Any
 from threading import Event
 import colorsys
 
-from py.hidapi_py_dualsense import DualSenseController
-from py.hidapi_py_dualsense.utils import get_available_controllers
-from py.hidapi_py_dualsense.backends import SDL3Backend
+from hidapi_py_dualsense import DualSenseController
+from hidapi_py_dualsense.utils import get_available_controllers
+from hidapi_py_dualsense.backends import SDL3Backend, HidAPIBackend
 
 exit_event = Event()
 
@@ -15,12 +15,12 @@ def signal_handler(sig: int, frame: Any, controller: DualSenseController) -> Non
     print("\nCtrl+C detected! Stopping controller...")
     controller.close()
     exit_event.set()
-    SDL3Backend.quit()
+    HidAPIBackend.quit()
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, controller))
 
-    SDL3Backend.init()
+    HidAPIBackend.init()
 
     available_controllers = get_available_controllers()
     if len(available_controllers) == 0:

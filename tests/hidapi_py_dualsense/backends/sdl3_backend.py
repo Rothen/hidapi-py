@@ -20,7 +20,7 @@ class SDL3Backend(Backend[SDL3DeviceInfo]):
                 id_value = ids_ptr[i]
                 if id_value == 0:
                     break
-                available_devices.append(SDL3DeviceInfo(id_value, id_value))
+                available_devices.append(SDL3DeviceInfo(id_value))
                 i += 1
 
             SDL_free(ids_ptr)
