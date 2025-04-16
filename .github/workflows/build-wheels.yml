@@ -13,15 +13,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set env
+        if: startsWith(runner.os, 'macOS')
+        run: |
+          brew install --force hidapi
+          echo "CMAKE_ARGS=-DHIDAPI_ROOT=$(brew --prefix hidapi)" >> $GITHUB_ENV
+      - name: Test
+        run: echo $GITHUB_SHA_SHORT
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23.2
         env:
           CIBW_BEFORE_ALL_LINUX: yum -y install hidapi-devel
-          CIBW_BEFORE_ALL_MACOS: |
-            brew install --force hidapi
-            echo "Resolving HIDAPI path..."
-            HIDAPI_PREFIX=$(brew --prefix hidapi)
-            echo "CMAKE_ARGS=-DHIDAPI_ROOT=$HIDAPI_PREFIX" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v4
         with:
