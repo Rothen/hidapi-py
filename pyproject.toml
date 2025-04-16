@@ -26,6 +26,6 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel.include]
-linux = ["build/linux/hidapi_py.so"]
+linux = ["build/hidapi_py.cpython-311-x86_64-linux-gnu.so"]
 macos = ["build/macos/hidapi_py.so"]
 windows = ["build/windows/hidapi_py.pyd", "build/windows/hidapi.dll"]

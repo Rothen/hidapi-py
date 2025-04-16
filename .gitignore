@@ -3,3 +3,4 @@ scripts/set_env.ps1
 deps/pybind11/
 .vscode/
 __pycache__/
+*.tar.gz
