@@ -26,7 +26,7 @@ SDL3DeviceInfoType: TypeAlias = DeviceInfo[LP_SDL_JoystickID, LP_SDL_JoystickID]
 
 class SDL3Backend(Backend[SDL3DeviceInfoType]):
     @staticmethod
-    def get_available_devices() -> list[SDL3DeviceInfoType]:
+    def _get_available_devices() -> list[SDL3DeviceInfoType]:
         available_devices: list[SDL3DeviceInfoType] = []
 
         ids_ptr = SDL_GetGamepads(None)

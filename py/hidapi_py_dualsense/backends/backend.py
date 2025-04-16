@@ -42,7 +42,7 @@ class Backend(ABC, Generic[DeviceInfoType]):
 
     @staticmethod
     @abstractmethod
-    def get_available_devices() -> list[DeviceInfoType]:
+    def _get_available_devices() -> list[DeviceInfoType]:
         """
         Open a connection to the device at the specified path.
         """
@@ -166,17 +166,30 @@ class Backend(ABC, Generic[DeviceInfoType]):
         """
         Initialize the backend.
         """
+        if cls == Backend:
+            raise TypeError("Cannot initialize the base Backend class directly.")
+
         Backend.ActiveBackend = cls._init()
 
     @classmethod
-    def quit(cls) -> None:
+    def get_available_devices(cls) -> list[DeviceInfoType]:
+        """
+        Open a connection to the device at the specified path.
+        """
+        if Backend.ActiveBackend is None:
+            raise TypeError("Cannot call get_available_devices() without initializing the backend.")
+
+        return Backend.ActiveBackend._get_available_devices()
+
+    @staticmethod
+    def quit() -> None:
         """
         Close the backend.
         """
         if Backend.ActiveBackend is None:
             return
 
-        cls._quit()
+        Backend.ActiveBackend._quit()
         Backend.ActiveBackend = None
 
     def before_start(self):

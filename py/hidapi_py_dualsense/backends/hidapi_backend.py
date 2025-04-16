@@ -28,7 +28,7 @@ HidDeviceInfoType: TypeAlias = DeviceInfo[str, HidDeviceInfo]
 
 class HidAPIBackend(Backend[HidDeviceInfoType]):
     @staticmethod
-    def get_available_devices() -> list[HidDeviceInfoType]:
+    def _get_available_devices() -> list[HidDeviceInfoType]:
         return [HidDeviceInfoType(hid_device_info.path, hid_device_info) for hid_device_info in get_all_device_infos(SONY_VENDOR_ID, DS_PRODUCT_ID)]
 
     @staticmethod
