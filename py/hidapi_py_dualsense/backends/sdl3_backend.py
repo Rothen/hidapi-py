@@ -94,7 +94,8 @@ class SDL3Backend(Backend[SDL3DeviceInfoType]):
     def close(self):
         if self.__sdl_opened_gamepad is None:
             return
-
+        
+        self.set_led(0, 0, 0)
         SDL_CloseGamepad(self.__sdl_opened_gamepad)
 
     def _read(self):

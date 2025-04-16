@@ -30,7 +30,7 @@ class DeviceInfo(Generic[ID, T]):
     orig_device_info: T
 
 
-DeviceInfoType = TypeVar("DeviceInfoType", bound=DeviceInfo)
+DeviceInfoType = TypeVar("DeviceInfoType", bound=DeviceInfo[Any, Any])
 
 
 class Backend(ABC, Generic[DeviceInfoType]):
@@ -38,7 +38,7 @@ class Backend(ABC, Generic[DeviceInfoType]):
     Abstract base class for backend implementations.
     """
 
-    ActiveBackend: Backend[Any] | None = None
+    ActiveBackend: Type[Backend[Any]] | None = None
 
     @staticmethod
     @abstractmethod
@@ -47,29 +47,14 @@ class Backend(ABC, Generic[DeviceInfoType]):
         Open a connection to the device at the specified path.
         """
 
-    @classmethod
-    def init(cls) -> None:
-        """
-        Initialize the backend.
-        """
-        cls.ActiveBackend = cls._init()
-
-    @classmethod
-    def quit(cls) -> None:
-        """
-        Close the backend.
-        """
-        cls._quit()
-        cls.ActiveBackend = None
-
     @staticmethod
     @abstractmethod
-    def _init(cls) -> Type[Backend[Any]]:
+    def _init() -> Type[Backend[DeviceInfoType]]:
         pass
 
     @staticmethod
     @abstractmethod
-    def _quit(cls) -> None:
+    def _quit() -> None:
         pass
 
     @abstractmethod
@@ -103,6 +88,7 @@ class Backend(ABC, Generic[DeviceInfoType]):
         """
 
     __slots__ = (
+        "_device_info",
         "_read_time",
         "_last_read_time",
         "_square",
@@ -137,6 +123,72 @@ class Backend(ABC, Generic[DeviceInfoType]):
         "_right_trigger_feedback",
         "_orientation",
     )
+
+    def __init__(self, device_info: DeviceInfoType):
+        self._device_info: Final[DeviceInfoType] = device_info
+        self._read_time: float = 0.0
+        self._last_read_time: float = 0.0
+
+        self._square: Final[ButtonValue] = ButtonValue()
+        self._cross: Final[ButtonValue] = ButtonValue()
+        self._circle: Final[ButtonValue] = ButtonValue()
+        self._triangle: Final[ButtonValue] = ButtonValue()
+        self._dpad_up: Final[ButtonValue] = ButtonValue()
+        self._dpad_right: Final[ButtonValue] = ButtonValue()
+        self._dpad_down: Final[ButtonValue] = ButtonValue()
+        self._dpad_left: Final[ButtonValue] = ButtonValue()
+        self._l1: Final[ButtonValue] = ButtonValue()
+        self._r1: Final[ButtonValue] = ButtonValue()
+        self._l2: Final[ButtonValue] = ButtonValue()
+        self._r2: Final[ButtonValue] = ButtonValue()
+        self._share: Final[ButtonValue] = ButtonValue()
+        self._options: Final[ButtonValue] = ButtonValue()
+        self._l3: Final[ButtonValue] = ButtonValue()
+        self._r3: Final[ButtonValue] = ButtonValue()
+        self._ps: Final[ButtonValue] = ButtonValue()
+        self._touch: Final[ButtonValue] = ButtonValue()
+        self._mikrophone: Final[ButtonValue] = ButtonValue()
+        self._left_joy_stick: Final[ReadableValue[JoyStick]] = ReadableValue[JoyStick](JoyStick())
+        self._right_joy_stick: Final[ReadableValue[JoyStick]] = ReadableValue[JoyStick](JoyStick())
+        self._l2_trigger: Final[ReadableValue[float]] = ReadableValue[float](0.0)
+        self._r2_trigger: Final[ReadableValue[float]] = ReadableValue[float](0.0)
+        self._accelerometer: Final[ReadableValue[Accelerometer]] = ReadableValue[Accelerometer](Accelerometer())
+        self._gyroscope: Final[ReadableValue[Gyroscope]] = ReadableValue[Gyroscope](Gyroscope())
+        self._battery: Final[ReadableValue[Battery]] = ReadableValue[Battery](Battery())
+        self._touch_finger_1: Final[ReadableValue[TouchFinger]] = ReadableValue[TouchFinger](TouchFinger())
+        self._touch_finger_2: Final[ReadableValue[TouchFinger]] = ReadableValue[TouchFinger](TouchFinger())
+        self._left_trigger_feedback: Final[ReadableValue[TriggerFeedback]] = ReadableValue[TriggerFeedback](TriggerFeedback())
+        self._right_trigger_feedback: Final[ReadableValue[TriggerFeedback]] = ReadableValue[TriggerFeedback](TriggerFeedback())
+        self._orientation: Final[ReadableValue[Orientation]] = ReadableValue[Orientation](Orientation())
+
+    @classmethod
+    def init(cls) -> None:
+        """
+        Initialize the backend.
+        """
+        cls.ActiveBackend = cls._init()
+
+    @classmethod
+    def quit(cls) -> None:
+        """
+        Close the backend.
+        """
+        cls._quit()
+        cls.ActiveBackend = None
+
+    def before_start(self):
+        """
+        Initialize the backend with the device information.
+        """
+        pass
+
+    def read(self):
+        """
+        Read data from the device.
+        """
+        self._read_time = time.perf_counter() * 1000.0
+        self._read()
+        self._last_read_time = self._read_time
 
     @property
     def square(self) -> ButtonValue:
@@ -259,56 +311,5 @@ class Backend(ABC, Generic[DeviceInfoType]):
         return self._right_trigger_feedback
 
     @property
-    def orientation (self) -> ReadableValue[Orientation]:
+    def orientation(self) -> ReadableValue[Orientation]:
         return self._orientation
-
-    def __init__(self, device_info: DeviceInfoType):
-        self._device_info: Final[DeviceInfoType] = device_info
-        self._read_time: float = 0.0
-        self._last_read_time: float = 0.0
-
-        self._square: Final[ButtonValue] = ButtonValue()
-        self._cross: Final[ButtonValue] = ButtonValue()
-        self._circle: Final[ButtonValue] = ButtonValue()
-        self._triangle: Final[ButtonValue] = ButtonValue()
-        self._dpad_up: Final[ButtonValue] = ButtonValue()
-        self._dpad_right: Final[ButtonValue] = ButtonValue()
-        self._dpad_down: Final[ButtonValue] = ButtonValue()
-        self._dpad_left: Final[ButtonValue] = ButtonValue()
-        self._l1: Final[ButtonValue] = ButtonValue()
-        self._r1: Final[ButtonValue] = ButtonValue()
-        self._l2: Final[ButtonValue] = ButtonValue()
-        self._r2: Final[ButtonValue] = ButtonValue()
-        self._share: Final[ButtonValue] = ButtonValue()
-        self._options: Final[ButtonValue] = ButtonValue()
-        self._l3: Final[ButtonValue] = ButtonValue()
-        self._r3: Final[ButtonValue] = ButtonValue()
-        self._ps: Final[ButtonValue] = ButtonValue()
-        self._touch: Final[ButtonValue] = ButtonValue()
-        self._mikrophone: Final[ButtonValue] = ButtonValue()
-        self._left_joy_stick: Final[ReadableValue[JoyStick]] = ReadableValue[JoyStick](JoyStick())
-        self._right_joy_stick: Final[ReadableValue[JoyStick]] = ReadableValue[JoyStick](JoyStick())
-        self._l2_trigger: Final[ReadableValue[float]] = ReadableValue[float](0.0)
-        self._r2_trigger: Final[ReadableValue[float]] = ReadableValue[float](0.0)
-        self._accelerometer: Final[ReadableValue[Accelerometer]] = ReadableValue[Accelerometer](Accelerometer())
-        self._gyroscope: Final[ReadableValue[Gyroscope]] = ReadableValue[Gyroscope](Gyroscope())
-        self._battery: Final[ReadableValue[Battery]] = ReadableValue[Battery](Battery())
-        self._touch_finger_1: Final[ReadableValue[TouchFinger]] = ReadableValue[TouchFinger](TouchFinger())
-        self._touch_finger_2: Final[ReadableValue[TouchFinger]] = ReadableValue[TouchFinger](TouchFinger())
-        self._left_trigger_feedback: Final[ReadableValue[TriggerFeedback]] = ReadableValue[TriggerFeedback](TriggerFeedback())
-        self._right_trigger_feedback: Final[ReadableValue[TriggerFeedback]] = ReadableValue[TriggerFeedback](TriggerFeedback())
-        self._orientation: Final[ReadableValue[Orientation]] = ReadableValue[Orientation](Orientation())
-
-    def before_start(self):
-        """
-        Initialize the backend with the device information.
-        """
-        pass
-
-    def read(self):
-        """
-        Read data from the device.
-        """
-        self._read_time = time.perf_counter() * 1000.0
-        self._read()
-        self._last_read_time = self._read_time

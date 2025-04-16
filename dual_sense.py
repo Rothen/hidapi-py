@@ -50,7 +50,7 @@ if __name__ == '__main__':
     # controller.r2_trigger_changed(lambda value: print("R2 Grad", value))
     # controller.orientation_changed(lambda orientation: print(orientation))
     controller.set_led(255, 0, 0)
-    backend.test()
+    # backend.test()
 
     while not exit_event.is_set():
         time.sleep(0.1)
