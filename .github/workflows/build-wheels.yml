@@ -17,9 +17,11 @@ jobs:
         uses: pypa/cibuildwheel@v2.23.2
         env:
           CIBW_BEFORE_ALL_LINUX: yum -y install hidapi-devel
-          CIBW_BEFORE_ALL_MACOS: brew install --force hidapi & CMAKE_PREFIX_PATH=/opt/homebrew
-          CIBW_ENVIRONMENT: >
-            CMAKE_PREFIX_PATH=/opt/homebrew
+          CIBW_BEFORE_ALL_MACOS: |
+            brew install --force hidapi
+            echo "Resolving HIDAPI path..."
+            HIDAPI_PREFIX=$(brew --prefix hidapi)
+            echo "CMAKE_ARGS=-DHIDAPI_ROOT=$HIDAPI_PREFIX" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v4
         with:
