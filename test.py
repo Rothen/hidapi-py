@@ -1,21 +1,10 @@
-from hidapi_py import HidDevice, get_all_device_infos
+import sdl3
+from sdl3 import SDL_GetJoysticks
+sdl3.SDL_Init(sdl3.SDL_INIT_GAMEPAD)
 
-vendor_id: int = 0x054C
-product_id: int = 0x0CE6
+if SDL_GetJoysticks(None):
+    print("Joystick found")
+else:
+    print("No joystick found")
 
-device_infos = get_all_device_infos(vendor_id, product_id)
-# device_infos = get_all_device_infos(0, 0)
-
-for i, device_info in enumerate(device_infos):
-    if device_info.vendor_id in [5426, 2821, 1133]:
-        continue
-    try:
-        device = HidDevice(device_info.path)
-        if device.open() != 0:
-            continue
-        print(device.get_manufacturer())
-        print(device.get_product())
-        device.close()
-        print('###########################################')
-    except Exception as e:
-        pass
+sdl3.SDL_Quit()

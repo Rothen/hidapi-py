@@ -14,17 +14,16 @@ def signal_handler(sig: int, frame: Any, controller: DualSenseController) -> Non
     print("\nCtrl+C detected! Stopping controller...")
     controller.close()
     exit_event.set()
+    SDL3Backend.quit()
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, controller))
 
-    # Backend = HidAPIBackend
-    SDL_Init(SDL_INIT_GAMEPAD)
-    Backend = SDL3Backend
-    
-    device = Backend.get_available_devices()[0]
-    backend = Backend(device)
-    controller = DualSenseController(Backend(device))
+    SDL3Backend.init()
+
+    device = SDL3Backend.get_available_devices()[0]
+    backend = SDL3Backend(device)
+    controller = DualSenseController(SDL3Backend(device))
     controller.open()
     controller.square_pressed(lambda: print("Square"))
     controller.cross_pressed(lambda: print("Cross"))

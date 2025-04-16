@@ -4,7 +4,7 @@ from threading import Thread, Event
 
 from reactivex.abc import DisposableBase
 
-from .backends import Backend
+from .backends import Backend, DeviceInfo
 from .readable_value import ChangeCallable, ButtonPressedCallable, ButtonReleasedCallable
 from .states import (
     Accelerometer,
@@ -13,7 +13,7 @@ from .states import (
     JoyStick,
     Orientation,
     TouchFinger,
-    TriggerFeedback
+    TriggerFeedback,
 )
 
 
@@ -60,18 +60,18 @@ class DualSenseController:
     @property
     def read_time(self) -> float:
         return self.__read_time
-    
+
     @property
     def loop_time(self) -> float:
         return self.__loop_time
 
-    def __init__(self, backend: Backend[Any]) -> None:
-        self._backend: Final[Backend[Any]] = backend
+    def __init__(self, device_info: DeviceInfo) -> None:
+        self._backend: Final[Backend[Any]] = Backend.ActiveBackend(device_info)
         self._read_thread: Final[Thread] = Thread(target=self._read_loop, daemon=True)
         self._exit_event: Final[Event] = Event()
 
         self.__loop_time: float = -1.0
-    
+
     def open(self):
         self._backend.open()
         self._read_thread.start()
@@ -79,10 +79,10 @@ class DualSenseController:
     def close(self):
         self._exit_event.set()
         self._read_thread.join()
-    
+
     def _read_loop(self) -> None:
         self._backend.before_start()
-        
+
         while not self._exit_event.is_set():
             start = time.perf_counter()
             self.__read_time = (time.perf_counter() - start) * 1000.0

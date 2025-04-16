@@ -1,8 +1,9 @@
-from typing import Final
+from __future__ import annotations
+from typing import Final, Type, TypeAlias
 
 from hidapi_py import HidDeviceInfo, HidDevice, get_all_device_infos
 
-from .backend import Backend
+from .backend import DeviceInfo, Backend
 from .in_report import InReport, Usb01InReport, Bt01InReport, Bt31InReport, InReportLength, InvalidInReportLengthException
 from .out_report import OutReport, Usb01OutReport, Bt01OutReport, Bt31OutReport
 from ..mapping import (
@@ -22,20 +23,31 @@ SONY_VENDOR_ID: int = 0x054C
 DS_PRODUCT_ID: int = 0x0CE6
 
 
-class HidAPIBackend(Backend[HidDeviceInfo]):
+HidDeviceInfoType: TypeAlias = DeviceInfo[str, HidDeviceInfo]
+
+
+class HidAPIBackend(Backend[HidDeviceInfoType]):
     @staticmethod
-    def get_available_devices() -> list[HidDeviceInfo]:
-        return get_all_device_infos(SONY_VENDOR_ID, DS_PRODUCT_ID)
+    def get_available_devices() -> list[HidDeviceInfoType]:
+        return [HidDeviceInfoType(hid_device_info.path, hid_device_info) for hid_device_info in get_all_device_infos(SONY_VENDOR_ID, DS_PRODUCT_ID)]
+
+    @staticmethod
+    def _init() -> Type[HidAPIBackend]:
+        return HidAPIBackend
+
+    @staticmethod
+    def _quit() -> None:
+        pass
 
     __slots__ = (
         "_hid_device",
         "__in_report",
         "__out_report",
     )
-    
-    def __init__(self, hid_device_info: HidDeviceInfo):
-        super().__init__()
-        self._hid_device: Final[HidDevice] = HidDevice(hid_device_info.path)
+
+    def __init__(self, device_info: HidDeviceInfoType):
+        super().__init__(device_info)
+        self._hid_device: Final[HidDevice] = HidDevice(device_info.id)
         self.__in_report: InReport | None = None
         self.__out_report: OutReport | None = None
 
@@ -71,9 +83,9 @@ class HidAPIBackend(Backend[HidDeviceInfo]):
         self._cross = uint8_bit_to_bool(self.__in_report.buttons_0, InReport.CROSS_BIT)
         self._circle = uint8_bit_to_bool(self.__in_report.buttons_0, InReport.CIRCLE_BIT)
         self._triangle = uint8_bit_to_bool(self.__in_report.buttons_0, InReport.TRIANGLE_BIT)
-        
+
         self._dpad_up, self._dpad_right, self._dpad_down, self._dpad_left = uint8_value_mapping(self.__in_report.buttons_0 & 0b1111, InReport.DPAD_MAPPING)
-        
+
         self._l1 = uint8_bit_to_bool(self.__in_report.buttons_1, InReport.L1_BIT)
         self._r1 = uint8_bit_to_bool(self.__in_report.buttons_1, InReport.R1_BIT)
         self._l2 = uint8_bit_to_bool(self.__in_report.buttons_1, InReport.L2_BIT)

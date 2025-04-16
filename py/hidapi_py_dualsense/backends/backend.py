@@ -1,6 +1,8 @@
+from __future__ import annotations
 import time
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Final
+from dataclasses import dataclass
+from typing import Generic, TypeVar, Final, Any, Type
 
 
 from ..readable_value import ReadableValue, ButtonValue
@@ -15,20 +17,60 @@ from ..states import (
 )
 
 
-DeviceType = TypeVar("DeviceType")
+ID = TypeVar("ID")
+T = TypeVar("T")
 
 
-class Backend(ABC, Generic[DeviceType]):
+@dataclass(frozen=True, slots=True)
+class DeviceInfo(Generic[ID, T]):
+    """
+    Class to hold device information.
+    """
+    id: ID
+    orig_device_info: T
+
+
+DeviceInfoType = TypeVar("DeviceInfoType", bound=DeviceInfo)
+
+
+class Backend(ABC, Generic[DeviceInfoType]):
     """
     Abstract base class for backend implementations.
     """
 
+    ActiveBackend: Backend[Any] | None = None
+
     @staticmethod
     @abstractmethod
-    def get_available_devices() -> list[DeviceType]:
+    def get_available_devices() -> list[DeviceInfoType]:
         """
         Open a connection to the device at the specified path.
         """
+
+    @classmethod
+    def init(cls) -> None:
+        """
+        Initialize the backend.
+        """
+        cls.ActiveBackend = cls._init()
+
+    @classmethod
+    def quit(cls) -> None:
+        """
+        Close the backend.
+        """
+        cls._quit()
+        cls.ActiveBackend = None
+
+    @staticmethod
+    @abstractmethod
+    def _init(cls) -> Type[Backend[Any]]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def _quit(cls) -> None:
+        pass
 
     @abstractmethod
     def open(self):
@@ -59,7 +101,7 @@ class Backend(ABC, Generic[DeviceType]):
         """
         Set the LED color of the device.
         """
-    
+
     __slots__ = (
         "_read_time",
         "_last_read_time",
@@ -95,7 +137,6 @@ class Backend(ABC, Generic[DeviceType]):
         "_right_trigger_feedback",
         "_orientation",
     )
-    
 
     @property
     def square(self) -> ButtonValue:
@@ -220,11 +261,12 @@ class Backend(ABC, Generic[DeviceType]):
     @property
     def orientation (self) -> ReadableValue[Orientation]:
         return self._orientation
-    
-    def __init__(self):
+
+    def __init__(self, device_info: DeviceInfoType):
+        self._device_info: Final[DeviceInfoType] = device_info
         self._read_time: float = 0.0
         self._last_read_time: float = 0.0
-    
+
         self._square: Final[ButtonValue] = ButtonValue()
         self._cross: Final[ButtonValue] = ButtonValue()
         self._circle: Final[ButtonValue] = ButtonValue()

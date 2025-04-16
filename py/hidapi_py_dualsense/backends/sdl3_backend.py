@@ -1,10 +1,11 @@
 # type: ignore
-from typing import Final
+from __future__ import annotations
+from typing import Final, Type, TypeAlias
 import math
 
 from sdl3 import *
 
-from .backend import Backend
+from .backend import Backend, DeviceInfo
 from .out_report import Usb01OutReport
 from ..readable_value import ReadableValue, ButtonValue
 from ..states import (
@@ -19,11 +20,15 @@ from ..states import (
 
 deadzone: float = 0.1
 
-class SDL3Backend(Backend[SDL_Gamepad]):
+
+SDL3DeviceInfoType: TypeAlias = DeviceInfo[LP_SDL_JoystickID, LP_SDL_JoystickID]
+
+
+class SDL3Backend(Backend[SDL3DeviceInfoType]):
     @staticmethod
-    def get_available_devices() -> list[SDL_Gamepad]:
-        available_devices: list[SDL_Gamepad] = []
-        
+    def get_available_devices() -> list[SDL3DeviceInfoType]:
+        available_devices: list[SDL3DeviceInfoType] = []
+
         ids_ptr = SDL_GetGamepads(None)
         if ids_ptr:
             i = 0
@@ -31,23 +36,30 @@ class SDL3Backend(Backend[SDL_Gamepad]):
                 id_value = ids_ptr[i]
                 if id_value == 0:
                     break
-                available_devices.append(SDL_Gamepad(id_value))
+                available_devices.append(SDL3DeviceInfoType(id_value, id_value))
                 i += 1
 
             SDL_free(ids_ptr)
 
         return available_devices
 
+    @staticmethod
+    def _init() -> Type[SDL3Backend]:
+        SDL_Init(SDL_INIT_GAMEPAD)
+        return SDL3Backend
+
+    @staticmethod
+    def _quit() -> None:
+        SDL_Quit()
+
     __slots__ = (
-        "__sdl_gamepad",
         "__sdl_opened_gamepad",
         "__button_map",
         "__last_gyro_measurement"
     )
-    
-    def __init__(self, sdl_gamepad: SDL_Gamepad):
-        super().__init__()
-        self.__sdl_gamepad: Final[SDL_Gamepad] = sdl_gamepad
+
+    def __init__(self, device_info: SDL3DeviceInfoType):
+        super().__init__(device_info)
         self.__sdl_opened_gamepad: LP_SDL_Gamepad | None = None
         self.__button_map: list[ButtonValue] = [
             self._cross,
@@ -75,14 +87,14 @@ class SDL3Backend(Backend[SDL_Gamepad]):
         self.__last_gyro_measurement: float = 0.0
 
     def open(self):
-        self.__sdl_opened_gamepad = SDL_OpenGamepad(self.__sdl_gamepad.value)
+        self.__sdl_opened_gamepad = SDL_OpenGamepad(self._device_info.id)
         SDL_SetGamepadSensorEnabled(self.__sdl_opened_gamepad, SDL_SENSOR_ACCEL, True)
         SDL_SetGamepadSensorEnabled(self.__sdl_opened_gamepad, SDL_SENSOR_GYRO, True)
 
     def close(self):
         if self.__sdl_opened_gamepad is None:
             return
-        
+
         SDL_CloseGamepad(self.__sdl_opened_gamepad)
 
     def _read(self):
@@ -99,23 +111,23 @@ class SDL3Backend(Backend[SDL_Gamepad]):
         Write data to the device.
         """
         pass
-    
+
     def __map_event(self, event: SDL_Event) -> None:
-            if event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-                self.__button_map[event.gbutton.button].force_value(True)
-            elif event.type == SDL_EVENT_GAMEPAD_BUTTON_UP:
-                self.__button_map[event.gbutton.button].force_value(False)
-            elif event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION:
-                self._map_axis_motion_event(event.gaxis)
-            elif event.type == SDL_EVENT_GAMEPAD_SENSOR_UPDATE:
-                self._map_sensor_update_event(event.gsensor)
-            elif event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
-                pass
-            elif event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
-                pass
-            elif event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
-                pass
-    
+        if event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            self.__button_map[event.gbutton.button].force_value(True)
+        elif event.type == SDL_EVENT_GAMEPAD_BUTTON_UP:
+            self.__button_map[event.gbutton.button].force_value(False)
+        elif event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            self._map_axis_motion_event(event.gaxis)
+        elif event.type == SDL_EVENT_GAMEPAD_SENSOR_UPDATE:
+            self._map_sensor_update_event(event.gsensor)
+        elif event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
+            pass
+        elif event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
+            pass
+        elif event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
+            pass
+
     def _map_axis_motion_event(self, axis_event: SDL_GamepadAxisEvent) -> None:
         new_value = ((axis_event.value + 32768) / 65535.0) * 2 - 1
         if abs(new_value) < deadzone:
@@ -149,7 +161,7 @@ class SDL3Backend(Backend[SDL_Gamepad]):
             self._accelerometer.force_value(Accelerometer(sensor_event.data[0], sensor_event.data[1], sensor_event.data[2]))
         elif sensor_event.sensor == SDL_SENSOR_GYRO:
             self._gyroscope.force_value(Gyroscope(sensor_event.data[0], sensor_event.data[1], sensor_event.data[2]))
-        
+
             alpha: float = 0.98
             roll_acc = math.atan2(self._accelerometer.value.y, self._accelerometer.value.z)
             pitch_acc = math.atan2(-self._accelerometer.value.x,
@@ -157,7 +169,7 @@ class SDL3Backend(Backend[SDL_Gamepad]):
 
             dt = (self.__last_gyro_measurement - sensor_event.timestamp) / 1000000.0
             self.__last_gyro_measurement = sensor_event.timestamp
-            
+
             roll = alpha * (self._orientation.value.roll + self._gyroscope.value.x * dt) + \
                 (1 - alpha) * roll_acc
             pitch = alpha * (self._orientation.value.pitch + self._gyroscope.value.y * dt) + \
@@ -168,11 +180,10 @@ class SDL3Backend(Backend[SDL_Gamepad]):
                 roll=roll,
                 yaw=yaw
             ))
-    
+
     def set_led(self, r: int, g: int, b: int) -> bool:
         return SDL_SetGamepadLED(self.__sdl_opened_gamepad, r, g, b)
-        
-    
+
     def test(self) -> None:
         out_report = Usb01OutReport()
         out_report.microphone_led = 0x01
