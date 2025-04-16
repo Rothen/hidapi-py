@@ -2,7 +2,7 @@ import signal
 import time
 from typing import Any
 from threading import Event
-from sdl3 import SDL_Init, SDL_INIT_GAMEPAD
+import colorsys
 
 from py.hidapi_py_dualsense import DualSenseController
 from py.hidapi_py_dualsense.backends import SDL3Backend
@@ -22,8 +22,7 @@ if __name__ == '__main__':
     SDL3Backend.init()
 
     device = SDL3Backend.get_available_devices()[0]
-    backend = SDL3Backend(device)
-    controller = DualSenseController(SDL3Backend(device))
+    controller = DualSenseController(device)
     controller.open()
     controller.square_pressed(lambda: print("Square"))
     controller.cross_pressed(lambda: print("Cross"))
@@ -49,8 +48,17 @@ if __name__ == '__main__':
     # controller.l2_trigger_changed(lambda value: print("L2 Grad", value))
     # controller.r2_trigger_changed(lambda value: print("R2 Grad", value))
     # controller.orientation_changed(lambda orientation: print(orientation))
-    controller.set_led(255, 0, 0)
     # backend.test()
 
+    hue = 0.0  # Start hue
     while not exit_event.is_set():
-        time.sleep(0.1)
+        # Convert hue (0.0–1.0) to RGB (0–255)
+        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+        r, g, b = int(r * 255), int(g * 255), int(b * 255)
+
+        controller.set_led(r, g, b)
+
+        hue += 0.01
+        if hue > 1.0:
+            hue = 0.0
+        time.sleep(0.05)

@@ -4,7 +4,7 @@ from threading import Thread, Event
 
 from reactivex.abc import DisposableBase
 
-from .backends import Backend, DeviceInfo
+from .backends import Backend, DeviceInfoType
 from .readable_value import ChangeCallable, ButtonPressedCallable, ButtonReleasedCallable
 from .states import (
     Accelerometer,
@@ -65,7 +65,7 @@ class DualSenseController:
     def loop_time(self) -> float:
         return self.__loop_time
 
-    def __init__(self, device_info: DeviceInfo) -> None:
+    def __init__(self, device_info: DeviceInfoType) -> None:
         self._backend: Final[Backend[Any]] = Backend.ActiveBackend(device_info)
         self._read_thread: Final[Thread] = Thread(target=self._read_loop, daemon=True)
         self._exit_event: Final[Event] = Event()

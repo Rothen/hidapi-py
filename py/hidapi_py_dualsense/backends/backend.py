@@ -166,15 +166,18 @@ class Backend(ABC, Generic[DeviceInfoType]):
         """
         Initialize the backend.
         """
-        cls.ActiveBackend = cls._init()
+        Backend.ActiveBackend = cls._init()
 
     @classmethod
     def quit(cls) -> None:
         """
         Close the backend.
         """
+        if Backend.ActiveBackend is None:
+            return
+
         cls._quit()
-        cls.ActiveBackend = None
+        Backend.ActiveBackend = None
 
     def before_start(self):
         """
