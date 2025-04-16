@@ -7,7 +7,7 @@ p = pyaudio.PyAudio()
 fs = 44100
 duration = 2.0
 freq = 440.0  # Hz (A4 tone)
-device_index = 35  # <- Replace with your USB speaker's device ID
+device_index = 31  # <- Replace with your USB speaker's device ID
 
 # Generate waveform
 samples = (np.sin(2 * np.pi * np.arange(fs * duration)
