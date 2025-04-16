@@ -45,8 +45,8 @@ class Backend(ABC, Generic[_DeviceInfoType]):
 
         Backend.ActiveBackend = cls._init()
 
-    @classmethod
-    def get_available_devices(cls) -> list[_DeviceInfoType]:
+    @staticmethod
+    def get_available_devices() -> list[_DeviceInfoType]:
         """
         Open a connection to the device at the specified path.
         """
