@@ -1,0 +1,31 @@
+[build-system]
+requires = [
+  "hatchling"
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "hidapi_py"
+version = "0.1.0"
+description = "Python bindings for HIDAPI"
+authors = [
+  { name = "Benjamin Heuberger", email = "beni.heu@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent"
+]
+license = { file = "LICENSE.txt" }
+
+[tool.hatch.build]
+# Include platform-specific .so files
+include = [
+    "build/hidapi_py.pyi",  # Include Python bindings
+]
+
+[tool.hatch.build.targets.wheel.include]
+linux = ["build/linux/hidapi_py.so"]
+macos = ["build/macos/hidapi_py.so"]
+windows = ["build/windows/hidapi_py.pyd", "build/windows/hidapi.dll"]
