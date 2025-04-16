@@ -5,6 +5,7 @@ from threading import Event
 import colorsys
 
 from py.hidapi_py_dualsense import DualSenseController
+from py.hidapi_py_dualsense.utils import get_available_controllers
 from py.hidapi_py_dualsense.backends import SDL3Backend
 
 exit_event = Event()
@@ -21,12 +22,12 @@ if __name__ == '__main__':
 
     SDL3Backend.init()
 
-    available_devices = SDL3Backend.get_available_devices()
-    if len(available_devices) == 0:
+    available_controllers = get_available_controllers()
+    if len(available_controllers) == 0:
         print("No DualSense controllers found.")
         exit(1)
 
-    controller = DualSenseController(available_devices[0])
+    controller = available_controllers[0]
     controller.open()
     controller.square_pressed(lambda: print("Square"))
     controller.cross_pressed(lambda: print("Cross"))

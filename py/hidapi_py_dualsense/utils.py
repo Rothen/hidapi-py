@@ -1,5 +1,6 @@
 from hidapi_py import get_all_device_infos
 
+from .backends import Backend
 from .dual_sense_controller import DualSenseController
 
 
@@ -18,3 +19,6 @@ def get_all_dual_sense_controllers() -> list[DualSenseController]:
 
 def get_all_xbox_360_controllers() -> list[DualSenseController]:
     return get_all_controllers(MS_VENDOR_ID, XBOX_CONTROLLER_PRODUCT_ID)
+
+def get_available_controllers() -> list[DualSenseController]:
+    return [DualSenseController(d) for d in Backend.get_available_devices()]
