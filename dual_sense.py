@@ -21,8 +21,12 @@ if __name__ == '__main__':
 
     SDL3Backend.init()
 
-    device = SDL3Backend.get_available_devices()[0]
-    controller = DualSenseController(device)
+    available_devices = SDL3Backend.get_available_devices()
+    if len(available_devices) == 0:
+        print("No DualSense controllers found.")
+        exit(1)
+
+    controller = DualSenseController(available_devices[0])
     controller.open()
     controller.square_pressed(lambda: print("Square"))
     controller.cross_pressed(lambda: print("Cross"))
@@ -48,11 +52,9 @@ if __name__ == '__main__':
     # controller.l2_trigger_changed(lambda value: print("L2 Grad", value))
     # controller.r2_trigger_changed(lambda value: print("R2 Grad", value))
     # controller.orientation_changed(lambda orientation: print(orientation))
-    # backend.test()
 
-    hue = 0.0  # Start hue
+    hue = 0.0
     while not exit_event.is_set():
-        # Convert hue (0.0–1.0) to RGB (0–255)
         r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
         r, g, b = int(r * 255), int(g * 255), int(b * 255)
 
