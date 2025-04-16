@@ -15,12 +15,12 @@ def signal_handler(sig: int, frame: Any, controller: DualSenseController) -> Non
     print("\nCtrl+C detected! Stopping controller...")
     controller.close()
     exit_event.set()
-    HidAPIBackend.quit()
+    SDL3Backend.quit()
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, lambda sig, frame: signal_handler(sig, frame, controller))
 
-    HidAPIBackend.init()
+    SDL3Backend.init()
 
     available_controllers = get_available_controllers()
     if len(available_controllers) == 0:
