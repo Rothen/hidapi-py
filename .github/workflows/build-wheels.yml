@@ -39,8 +39,12 @@ jobs:
         with:
           name: cibw-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
+
   build-ubuntu_x64:
-    name: Build wheels on ubuntu-latest
+    name: Build wheels on ubuntu-latest ${{ matrix.python-version }}
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12', '3.13', '3.14']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +52,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-            python-version: '3.11'
+            python-version: ${{ matrix.python-version }}
 
       - name: Install apt dependencies
         run: sudo apt install libhidapi-dev
@@ -62,8 +66,9 @@ jobs:
           pipx ensurepath
           pipx install build
           pipx run build
+          ls dist/
 
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-ubuntu-latest
-          path: ./*.whl
+          path: ./dist/*.whl
