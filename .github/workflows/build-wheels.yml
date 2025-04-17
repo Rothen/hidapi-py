@@ -37,10 +37,10 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
   build-ubuntu_x64:
-    name: Build Ubuntu x86_64
+    name: Build wheels on ubuntu-latest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,13 +56,6 @@ jobs:
       - name: Install pybind-stubgen
         run: pip3 install pybind11-stubgen
 
-      - name: Configure hidapi-py
-        run: |
-            cmake -S . -B build \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_C_COMPILER=/usr/bin/gcc \
-              -DCMAKE_CXX_COMPILER=/usr/bin/g++
-
       - name: Build hidapi-py
         run: |
           sudo apt install pipx
@@ -70,12 +63,7 @@ jobs:
           pipx install build
           pipx run build
 
-      - name: Upload hidapi-py Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: hidapi-py-ubuntu-x86_64
-          path: |
-            build/hidapi_py.cpython-311-x86_64-linux-gnu.so
-            build/hidapi_py.pyi
-          if-no-files-found: error
-          retention-days: 7
+          name: cibw-wheels-ubuntu-latest
+          path: ./*.whl
