@@ -13,18 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set MacOS 13 Env
-        if: startsWith(runner.os, 'macOS') && matrix.os == 'macos-13'
+      - name: Set MacOS Env
+        if: startsWith(runner.os, 'macOS')
         run: |
           brew install --force hidapi
           echo "CMAKE_ARGS=-DHIDAPI_ROOT=$(brew --prefix hidapi)" >> $GITHUB_ENV
+
+      - name: Set MacOS 13 Env
+        if: matrix.os == 'macos-13'
+        run: |
           echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
 
       - name: Set MacOS 14 Env
-        if: startsWith(runner.os, 'macOS') && matrix.os == 'macos-14'
+        if: matrix.os == 'macos-14'
         run: |
-          brew install --force hidapi
-          echo "CMAKE_ARGS=-DHIDAPI_ROOT=$(brew --prefix hidapi)" >> $GITHUB_ENV
           echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
 
       - name: Build wheels
