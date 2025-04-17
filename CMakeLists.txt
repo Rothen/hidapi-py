@@ -75,6 +75,18 @@ else()
     find_library(HIDAPI_LIBRARY NAMES hidapi-hidraw hidapi-libusb hidapi)
 endif()
 
+include(CheckCXXSourceCompiles)
+
+check_cxx_source_compiles("
+  #include <hidapi/hidapi.h>
+  int main() {
+    hid_bus_type type = HID_API_BUS_USB;
+    return 0;
+  }
+" HID_API_HAS_BUS_TYPE)
+
+configure_file(${CMAKE_SOURCE_DIR}/includes/config.h.in ${CMAKE_SOURCE_DIR}/includes/config.h)
+
 message(STATUS "Using HIDAPI from: ${HIDAPI_INCLUDE_DIR}")
 set_target_properties(hidapi-py PROPERTIES OUTPUT_NAME "hidapi_py")
 target_include_directories(hidapi-py PRIVATE ${CMAKE_SOURCE_DIR}/includes)

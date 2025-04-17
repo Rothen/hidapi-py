@@ -1,0 +1,1 @@
+#define HID_API_HAS_BUS_TYPE

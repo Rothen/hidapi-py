@@ -32,7 +32,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23.2
         env:
-          CIBW_BEFORE_ALL_LINUX: yum -y install hidapi-devel
+          CIBW_BEFORE_ALL_LINUX: yum -y install hidapi hidapi-devel
 
       - uses: actions/upload-artifact@v4
         with:

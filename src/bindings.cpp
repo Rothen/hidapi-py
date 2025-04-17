@@ -1,5 +1,6 @@
 #include "hid_device_info.h"
 #include "hid_device.h"
+#include "config.h"
 
 #ifdef _WIN32
     #include <hidapi.h>
@@ -20,14 +21,20 @@ PYBIND11_MODULE(hidapi_py, m) {
     m.doc() = "HIDAPI C++ bindings";
 
     m.attr("__version__") = "1.0.0";
+#ifdef HID_API_VERSION_STR
     m.attr("__hid_version__") = HID_API_VERSION_STR;
-
+#else
+    m.attr("__hid_version__") = "Unknown";
+#endif
+    
+#ifdef HID_API_HAS_BUS_TYPE
     py::enum_<hid_bus_type>(m, "HidBusType")
         .value("UNKNOWN", HID_API_BUS_UNKNOWN)
         .value("USB", HID_API_BUS_USB)
         .value("BLUETOOTH", HID_API_BUS_BLUETOOTH)
         .value("I2C", HID_API_BUS_I2C)
         .value("SPI", HID_API_BUS_SPI);
+#endif
 
     py::class_<HidDeviceInfo>(m, "HidDeviceInfo")
         .def(py::init<>())
