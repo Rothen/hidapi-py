@@ -39,3 +39,43 @@ jobs:
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
+  build-ubuntu_x64:
+    name: Build Ubuntu x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+            python-version: '3.11'
+
+      - name: Install apt dependencies
+        run: sudo apt install libhidapi-dev
+
+      - name: Install pybind-stubgen
+        run: pip3 install pybind11-stubgen
+
+      - name: Configure hidapi-py
+        run: |
+            cmake -S . -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_C_COMPILER=/usr/bin/gcc \
+              -DCMAKE_CXX_COMPILER=/usr/bin/g++
+
+      - name: Build hidapi-py
+        run: |
+          sudo apt install pipx
+          pipx ensurepath
+          pipx install build
+          pipx run build
+
+      - name: Upload hidapi-py Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hidapi-py-ubuntu-x86_64
+          path: |
+            build/hidapi_py.cpython-311-x86_64-linux-gnu.so
+            build/hidapi_py.pyi
+          if-no-files-found: error
+          retention-days: 7

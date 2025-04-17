@@ -13,7 +13,6 @@ readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
     "Intended Audience :: Developers",
-    # "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "License :: OSI Approved :: MIT License",
@@ -27,5 +26,4 @@ license = { file = "LICENSE.txt" }
 [tool.scikit-build]
 wheel.packages = ["hidapi_py"]
 sdist.include = ["src", "includes", "CMakeLists.txt", "README.md", "LICENSE.txt"]
-
 
