@@ -1,0 +1,48 @@
+name: Build Dev
+
+on:
+  push:
+    branches:
+      - "dev"
+
+jobs:
+  build_wheels:
+    name: Build dev wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set MacOS Env
+        if: startsWith(runner.os, 'macOS')
+        run: |
+          brew install --force hidapi
+          echo "CMAKE_ARGS=-DHIDAPI_ROOT=$(brew --prefix hidapi)" >> $GITHUB_ENV
+
+      - name: Set Linux Env
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          echo "CIBW_SKIP=*-win32 *-win_amd64 *-macosx* *-manylinux_i686" >> $GITHUB_ENV
+
+      - name: Set MacOS 13 Env
+        if: matrix.os == 'macos-13'
+        run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
+
+      - name: Set MacOS 14 Env
+        if: matrix.os == 'macos-14'
+        run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.23.2
+        env:
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_2_34_x86_64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
