@@ -23,7 +23,7 @@ jobs:
       - name: Set Linux Env
         if: matrix.os == 'ubuntu-latest'
         run: |
-          echo "CIBW_SKIP=\"*-win32 *-win_amd64 *-macosx* *-manylinux_i686\"" >> $GITHUB_ENV
+          echo "CIBW_SKIP=*-win32 *-win_amd64 *-macosx* *-manylinux_i686" >> $GITHUB_ENV
 
       - name: Set MacOS 13 Env
         if: matrix.os == 'macos-13'
