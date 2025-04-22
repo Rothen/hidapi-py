@@ -63,7 +63,7 @@ jobs:
       - name: Move wheels to dist/
         run: |
           mkdir -p dist
-          find dist -name '*.whl' -exec mv {} dist/ \;
+          find dist/** -name '*.whl' -exec mv {} dist/ \;
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.8
