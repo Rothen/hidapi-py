@@ -30,6 +30,3 @@ sdist.include = ["src", "includes", "CMakeLists.txt", "README.md", "LICENSE.txt"
 
 [tool.cibuildwheel.linux]
 before-build = "dnf -y install hidapi-devel"
-
-[tool.cibuildwheel]
-skip = "*-manylinux_i686 *musllinux*"
