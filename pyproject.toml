@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "hidapi_py"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python bindings for HIDAPI"
 authors = [
   { name = "Benjamin Heuberger", email = "beni.heu@gmail.com" }
