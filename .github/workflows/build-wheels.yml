@@ -1,6 +1,10 @@
 name: Build
 
-on: [push, pull_request]
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  pull_request:
 
 jobs:
   build_wheels:
@@ -9,7 +13,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-        # os: [windows-latest, macos-13, macos-14]
 
     steps:
       - uses: actions/checkout@v4
@@ -45,34 +48,23 @@ jobs:
           name: cibw-wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
-#   build-ubuntu_x64:
-#     name: Build wheels on ubuntu-latest ${{ matrix.python-version }}
-#     strategy:
-#       matrix:
-#         python-version: ['3.11', '3.12', '3.13']
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v4
+  publish:
+    name: Publish to PyPI
+    needs: build_wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-#       - name: Set up Python
-#         uses: actions/setup-python@v5
-#         with:
-#             python-version: ${{ matrix.python-version }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
 
-#       - name: Install apt dependencies
-#         run: sudo apt install libhidapi-dev
+      - name: Move wheels to dist/
+        run: |
+          mkdir -p dist
+          find dist -name '*.whl' -exec mv {} dist/ \;
 
-#       - name: Install pybind-stubgen
-#         run: pip3 install pybind11-stubgen
-
-#       - name: Build hidapi-py
-#         run: |
-#           sudo apt install pipx
-#           pipx ensurepath
-#           pipx install build
-#           pipx run build
-
-#       - uses: actions/upload-artifact@v4
-#         with:
-#           name: cibw-wheels-ubunut-latest-${{ matrix.python-version }}
-#           path: dist/*.whl
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.8.8
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
