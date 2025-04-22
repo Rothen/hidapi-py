@@ -22,12 +22,12 @@ PYBIND11_MODULE(hidapi_py, m) {
     m.attr("__version__") = "1.0.0";
     m.attr("__hid_version__") = HID_API_VERSION_STR;
     
-    py::enum_<hid_bus_type>(m, "HidBusType")
+    /*py::enum_<hid_bus_type>(m, "HidBusType")
         .value("UNKNOWN", HID_API_BUS_UNKNOWN)
         .value("USB", HID_API_BUS_USB)
         .value("BLUETOOTH", HID_API_BUS_BLUETOOTH)
         .value("I2C", HID_API_BUS_I2C)
-        .value("SPI", HID_API_BUS_SPI);
+        .value("SPI", HID_API_BUS_SPI);*/
 
     py::class_<HidDeviceInfo>(m, "HidDeviceInfo")
         .def(py::init<>())
@@ -40,8 +40,8 @@ PYBIND11_MODULE(hidapi_py, m) {
         .def_property_readonly("product_string", &HidDeviceInfo::get_product_string, "Product String")
         .def_property_readonly("usage_page", &HidDeviceInfo::get_usage_page, "Usage Page for this Device/Interface")
         .def_property_readonly("usage", &HidDeviceInfo::get_usage, "Usage for this Device/Interface")
-        .def_property_readonly("interface_number", &HidDeviceInfo::get_interface_number, "USB interface which this logical device represents")
-        .def_property_readonly("bus_type", &HidDeviceInfo::get_bus_type, "Underly bus type");
+        .def_property_readonly("interface_number", &HidDeviceInfo::get_interface_number, "USB interface which this logical device represents");
+        // .def_property_readonly("bus_type", &HidDeviceInfo::get_bus_type, "Underly bus type");
 
     py::class_<HidDevice>(m, "HidDevice")
         .def(py::init<unsigned short, unsigned short, std::wstring, bool>(),
@@ -61,7 +61,7 @@ PYBIND11_MODULE(hidapi_py, m) {
         .def("get_product", &HidDevice::get_product, "Get product string from the device")
         .def("get_serial_number", &HidDevice::get_serial_number, "Get serial number string from the device")
         .def("get_indexed_string", &HidDevice::get_indexed_string, py::arg("string_index"), "Get indexed string from the device")
-        .def("get_report_descriptor", &HidDevice::get_report_descriptor, "Get report descriptor from the device")
+        // .def("get_report_descriptor", &HidDevice::get_report_descriptor, "Get report descriptor from the device")
         .def("get_error", &HidDevice::get_error, "Get error string from the device")
         .def("is_opened", &HidDevice::is_opened, "Check if the device is opened");
 

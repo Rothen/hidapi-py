@@ -160,11 +160,11 @@ public:
         return std::wstring(temp_wchar_buffer);
     }
 
-    std::string get_report_descriptor()
+    /*std::string get_report_descriptor()
     {
         hid_get_report_descriptor(hid_device_ptr, temp_char_buffer, MAX_BUFFER_SIZE);
         return std::string(reinterpret_cast<char *>(temp_char_buffer));
-    }
+    }*/
 
     bool is_opened() const { return hid_device_ptr != nullptr; }
 

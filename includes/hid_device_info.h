@@ -23,7 +23,7 @@ class HidDeviceInfo {
 public:
     HidDeviceInfo() : device_info({}) {}
     HidDeviceInfo(hid_device_info *ptr) : device_info(*ptr) {}
-    HidDeviceInfo(HidDevice &hid_device) : device_info(*hid_get_device_info(hid_device.get_device())) {}
+    // HidDeviceInfo(HidDevice &hid_device) : device_info(*hid_get_device_info(hid_device.get_device())) {}
 
     std::string get_path() {return device_info.path;}
     unsigned short get_vendor_id() { return device_info.vendor_id; }
@@ -35,7 +35,7 @@ public:
     unsigned short get_usage_page() { return device_info.usage_page; }
     unsigned short get_usage() { return device_info.usage; }
     int get_interface_number() { return device_info.interface_number; }
-    hid_bus_type get_bus_type() { return device_info.bus_type; }
+    // hid_bus_type get_bus_type() { return device_info.bus_type; }
     hid_device_info *get_device_info_ptr() { return &device_info; }
     hid_device_info &get_device_info() { return device_info; }
 
