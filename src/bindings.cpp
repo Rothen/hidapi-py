@@ -19,7 +19,7 @@ namespace py = pybind11;
 PYBIND11_MODULE(hidapi_py, m) {
     m.doc() = "HIDAPI C++ bindings";
 
-    m.attr("__version__") = "0.1.1";
+    m.attr("__version__") = "0.1.2";
     m.attr("__hid_version__") = HID_API_VERSION_STR;
     
     /*py::enum_<hid_bus_type>(m, "HidBusType")
