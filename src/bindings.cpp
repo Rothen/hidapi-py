@@ -19,15 +19,8 @@ namespace py = pybind11;
 PYBIND11_MODULE(hidapi_py, m) {
     m.doc() = "HIDAPI C++ bindings";
 
-    m.attr("__version__") = "0.1.2";
+    m.attr("__version__") = HIDAPI_PY_VERSION;
     m.attr("__hid_version__") = HID_API_VERSION_STR;
-    
-    /*py::enum_<hid_bus_type>(m, "HidBusType")
-        .value("UNKNOWN", HID_API_BUS_UNKNOWN)
-        .value("USB", HID_API_BUS_USB)
-        .value("BLUETOOTH", HID_API_BUS_BLUETOOTH)
-        .value("I2C", HID_API_BUS_I2C)
-        .value("SPI", HID_API_BUS_SPI);*/
 
     py::class_<HidDeviceInfo>(m, "HidDeviceInfo")
         .def(py::init<>())

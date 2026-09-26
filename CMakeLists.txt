@@ -5,6 +5,26 @@ if(NOT DEPS_FOLDER)
     set(DEPS_FOLDER ${CMAKE_SOURCE_DIR}/deps)
 endif(NOT DEPS_FOLDER)
 
+if(DEFINED SKBUILD_PROJECT_VERSION_FULL)
+    set(HIDAPI_PY_VERSION ${SKBUILD_PROJECT_VERSION_FULL})
+else()
+    set(HIDAPI_PY_VERSION 0.0.0)
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND ${GIT_EXECUTABLE} describe --tags --match "v[0-9]*" --abbrev=0
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            OUTPUT_VARIABLE HIDAPI_PY_GIT_TAG
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            RESULT_VARIABLE HIDAPI_PY_GIT_RESULT
+            ERROR_QUIET)
+        if(HIDAPI_PY_GIT_RESULT EQUAL 0 AND HIDAPI_PY_GIT_TAG MATCHES "^v([0-9]+\\.[0-9]+\\.[0-9]+)")
+            set(HIDAPI_PY_VERSION ${CMAKE_MATCH_1})
+        endif()
+    endif()
+endif()
+message(STATUS "hidapi-py version: ${HIDAPI_PY_VERSION}")
+
 # Enable C++14
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -77,6 +97,7 @@ endif()
 
 message(STATUS "Using HIDAPI from: ${HIDAPI_INCLUDE_DIR}")
 set_target_properties(hidapi-py PROPERTIES OUTPUT_NAME "hidapi_py")
+target_compile_definitions(hidapi-py PRIVATE HIDAPI_PY_VERSION="${HIDAPI_PY_VERSION}")
 target_include_directories(hidapi-py PRIVATE ${CMAKE_SOURCE_DIR}/includes)
 target_include_directories(hidapi-py PRIVATE ${HIDAPI_INCLUDE_DIR})
 target_link_libraries(hidapi-py PRIVATE ${HIDAPI_LIBRARY})
