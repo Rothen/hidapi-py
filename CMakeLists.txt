@@ -27,7 +27,7 @@ FetchContent_Declare(
     pybind11
     GIT_REPOSITORY https://github.com/pybind/pybind11.git
     SOURCE_DIR "${DEPS_FOLDER}/pybind11"
-    GIT_TAG v2.13.6
+    GIT_TAG v3.1.0
 )
 FetchContent_MakeAvailable(pybind11)
 include_directories(${DEPS_FOLDER}/pybind11/include)
@@ -82,7 +82,7 @@ target_include_directories(hidapi-py PRIVATE ${HIDAPI_INCLUDE_DIR})
 target_link_libraries(hidapi-py PRIVATE ${HIDAPI_LIBRARY})
 
 add_custom_command(TARGET hidapi-py POST_BUILD
-    VERBATIM COMMAND python -c "import os; import sys; sys.path.insert(1, os.getcwd()) ; from pybind11_stubgen import main; import hidapi_py; sys.argv[0] = 'pybind11-stubgen'; sys.argv.append('--ignore-all-errors') ; sys.argv.append('-o') ; sys.argv.append('.') ; sys.argv.append('hidapi_py') ; main() " ||(exit 0)
+    VERBATIM COMMAND ${Python3_EXECUTABLE} -c "import os; import sys; sys.path.insert(1, os.getcwd()) ; from pybind11_stubgen import main; import hidapi_py; sys.argv[0] = 'pybind11-stubgen'; sys.argv.append('--ignore-all-errors') ; sys.argv.append('-o') ; sys.argv.append('.') ; sys.argv.append('hidapi_py') ; main() " ||(exit 0)
     WORKING_DIRECTORY $<TARGET_FILE_DIR:hidapi-py>
     COMMENT "Creating stubs for hidapi-py"
 )

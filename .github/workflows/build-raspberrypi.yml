@@ -1,0 +1,107 @@
+name: Build (Raspberry Pi)
+# on:
+#     push:
+#         branches: [main]
+#         tags-ignore:
+#             - "**"
+#     pull_request:
+#     workflow_dispatch:
+#     workflow_call:
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+    build:
+        name: Build wheel (linux_aarch64 for Raspberry Pi OS, Python ${{ matrix.python-version }})
+        # A native arm64 runner, but the build itself runs in Debian 12 (Bookworm), which is what 64-bit
+        # Raspberry Pi OS is based on: its glibc (2.36) decides the manylinux tag auditwheel can give the
+        # wheel, and one built on the runner's own Ubuntu 24.04 (glibc 2.39) would not install on a Pi.
+        # Bookworm only ships Python 3.11, so each version is a portable python-build-standalone build
+        # installed with uv; those need glibc 2.17 and run fine in the container.
+        # Raspberry Pi 3/4/5 (and Zero 2 W) running a 64-bit OS only; 32-bit (armhf) Pi OS is not covered.
+        runs-on: ubuntu-24.04-arm
+        container: debian:bookworm
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+        defaults:
+            run:
+                shell: bash
+
+        steps:
+            - name: Install native dependencies
+              env:
+                  DEBIAN_FRONTEND: noninteractive
+              run: |
+                  apt-get update
+                  apt-get install -y --no-install-recommends \
+                      ca-certificates git file curl \
+                      build-essential cmake pkg-config \
+                      libhidapi-dev
+
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Trust the checkout
+              # The workspace is owned by the runner's user, not the container's root; without this git
+              # refuses to read the repo.
+              run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+            - name: Set up uv
+              uses: astral-sh/setup-uv@v10.2.0
+
+            - name: Set up Python ${{ matrix.python-version }} and build/CI tooling
+              run: |
+                  uv python install ${{ matrix.python-version }}
+                  echo "BUILD_PYTHON=$(uv python find ${{ matrix.python-version }})" >> "$GITHUB_ENV"
+                  uv venv --seed --python ${{ matrix.python-version }} "$RUNNER_TEMP/venv"
+                  echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+                  "$RUNNER_TEMP/venv/bin/python" -m pip install --upgrade pip
+                  "$RUNNER_TEMP/venv/bin/python" -m pip install --upgrade build twine auditwheel patchelf
+
+            - name: Build wheel
+              run: python -m build --wheel --outdir wheelhouse-raw
+
+            - name: Repair wheel (bundle shared libraries, manylinux tag)
+              run: |
+                  auditwheel show wheelhouse-raw/*.whl
+                  auditwheel repair wheelhouse-raw/*.whl --wheel-dir dist
+
+            - name: Check distributions
+              run: python -m twine check dist/*
+
+            - name: Smoke test wheel
+              working-directory: ${{ runner.temp }}
+              run: |
+                  "$BUILD_PYTHON" -m venv smoke-venv
+                  smoke-venv/bin/python -m pip install --no-deps "$GITHUB_WORKSPACE"/dist/*.whl
+                  smoke-venv/bin/python - <<'EOF'
+                  import hidapi_py
+
+                  print(hidapi_py.__file__)
+                  print("version:", hidapi_py.__version__, "hidapi:", hidapi_py.__hid_version__)
+                  assert "site-packages" in hidapi_py.__file__
+
+                  hidapi_py.hid_init()
+                  # Runners have no HID devices; this only checks that enumeration works at all.
+                  print("devices:", len(hidapi_py.get_all_device_infos(0, 0)))
+                  hidapi_py.hid_exit()
+                  EOF
+                  site="$(smoke-venv/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')"
+                  so=$(echo "$site"/hidapi_py/hidapi_py.*.so)
+                  file "$so"
+                  if ldd "$so" | grep "not found"; then
+                      echo "::error::$so has unresolved shared libraries"
+                      exit 1
+                  fi
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: dist-raspberrypi-${{ matrix.python-version }}
+                  path: dist/
+                  if-no-files-found: error
